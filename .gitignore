@@ -1,0 +1,5 @@
+teardrop
+.env
+.env.testing
+.env.local
+.config.yml
