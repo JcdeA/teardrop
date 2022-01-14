@@ -5,8 +5,8 @@ import "github.com/natesales/aarch64-client-go"
 type VMRole int
 
 const (
-	Master VMRole = iota
-	Worker
+	Server VMRole = iota // nomad server node - orchestrates clients
+	Client               // nomad client role - executes jobs
 )
 
 type VM struct {

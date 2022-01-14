@@ -7,11 +7,12 @@ import (
 	"github.com/google/go-github/github"
 
 	"github.com/labstack/echo/v4"
+	"github.com/palantir/go-githubapp/githubapp"
 	"github.com/palantir/go-githubapp/oauth2"
 )
 
-func GithubOAuthHandler(ghconfig models.Config) echo.HandlerFunc {
-	ghHandler := oauth2.NewHandler(oauth2.GetConfig(ghconfig.Github,
+func GithubOAuthHandler(c githubapp.Config) echo.HandlerFunc {
+	ghHandler := oauth2.NewHandler(oauth2.GetConfig(c,
 		[]string{"user:email"}),
 		oauth2.OnLogin(func(w http.ResponseWriter, r *http.Request, login *oauth2.Login) {
 

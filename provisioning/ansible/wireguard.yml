@@ -1,0 +1,16 @@
+---
+- name: Wiregaurd setup
+  hosts: all
+  become: true
+  become_user: root
+  tasks:
+    - name: Enable ip forwarding
+      sysctl:
+        name: net.ipv4.ip_forward
+        value: 1
+        sysctl_set: yes
+        state: present
+        reload: yes
+    - name: Setup Wirguard
+      include_role:
+        name: githubixx.ansible_role_wireguard

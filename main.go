@@ -22,13 +22,13 @@ THE SOFTWARE.
 package main
 
 import (
-	"github.com/fosshostorg/teardrop/cmd"
+	"github.com/fosshostorg/teardrop/api"
 	"github.com/joho/godotenv"
 )
 
 func main() {
 	godotenv.Load(".env.testing")
 
-	cmd.Execute()
+	api.StartAPI()
 
 }

@@ -1,0 +1,16 @@
+---
+- src: https://github.com/ansible-community/ansible-consul.git
+  name: ansible-consul
+  scm: git
+  version: master
+
+- src: https://github.com/ansible-community/ansible-nomad.git
+  name: ansible-nomad
+  scm: git
+  version: master
+
+- src: githubixx.ansible_role_wireguard
+  name: ansible-wg
+
+- src:  geerlingguy.docker_arm
+

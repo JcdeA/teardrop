@@ -8,18 +8,22 @@ import (
 )
 
 func (ac *A64Client) GetVMs() ([]models.VM, error) {
-	projects, _ := ac.Projects()
+	projects, err := ac.Projects()
+	if err != nil {
+		return nil, err
+	}
+
 	for _, p := range projects.Projects {
-		if p.Name == "Fosshost - Teardrop" {
+		if p.Name == "Teardrop" {
 			vms := []models.VM{}
 
 			for _, vm := range p.VMs {
 				var role models.VMRole
-				if strings.HasPrefix(vm.Hostname, "master") {
-					role = models.Master
-				} else if strings.HasPrefix(vm.Hostname, "worker") {
-					role = models.Worker
-
+				vmRoleString := string(strings.Split(vm.Hostname, "-")[1][0]) // s or c
+				if vmRoleString == "s" {
+					role = models.Server
+				} else if vmRoleString == "c" {
+					role = models.Client
 				}
 				vms = append(vms, models.VM{VM: vm, Role: role})
 			}

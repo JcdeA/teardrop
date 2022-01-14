@@ -3,7 +3,6 @@ package provisioning
 import (
 	"fmt"
 	"net"
-	"os/exec"
 	"strings"
 	"time"
 
@@ -49,15 +48,13 @@ func SshVM(vm models.VM, cmd string) error {
 func CopyKeys(vm models.VM, keys []string) error {
 	for _, key := range keys {
 		// try to ssh into the vm before copying key
-		_, err := exec.Command("ssh", "-oBatchMode=yes", fmt.Sprintf("root@%v", strings.Split(vm.Address, "/")[0])).Output()
+
+		cmd := fmt.Sprintf("mkdir -p ~/.ssh && echo \"%v\" >> ~/.ssh/authorized_keys", key)
+		err := SshVM(vm, cmd)
 		if err != nil {
-			println(err.Error())
-			cmd := fmt.Sprintf("mkdir -p ~/.ssh && echo \"%v\" >> ~/.ssh/authorized_keys", key)
-			err := SshVM(vm, cmd)
-			if err != nil {
-				return err
-			}
+			return err
 		}
+
 	}
 
 	return nil

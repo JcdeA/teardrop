@@ -1,0 +1,50 @@
+---
+- name: Update to Debian 11
+  hosts: all
+  tasks:
+    - name: Update sources.list to Debian 11
+      copy:  
+        content: |
+          deb http://deb.debian.org/debian bullseye main
+          deb-src http://deb.debian.org/debian bullseye main
+
+          deb http://deb.debian.org/debian-security/ bullseye-security main
+          deb-src http://deb.debian.org/debian-security/ bullseye-security main
+
+          deb http://deb.debian.org/debian bullseye-updates main
+          deb-src http://deb.debian.org/debian bullseye-updates main
+        dest: /etc/apt/sources.list
+
+    - name: Run the equivalent of "apt-get update" as a separate step
+      apt:
+        update_cache: yes
+
+    
+    - name: Upgrade the OS (apt-get dist-upgrade)
+      apt:
+        upgrade: dist
+    
+    - name: Check if reboot needed
+      stat: path=/var/run/reboot-required
+      register: file_reboot_required
+
+    
+    - name: Wait for server to restart
+      reboot:
+        reboot_timeout: 3600
+      
+      when: file_reboot_required.stat.exists
+
+- name: Install & set up Docker 
+  hosts: bos
+  become: true
+  become_user: root
+  vars:
+    docker_edition: ce
+    docker_apt_arch: arm64
+    docker_daemon_options:
+      userns-remap: "default"
+      storage-driver: "overlay2"
+  roles:
+    - geerlingguy.docker
+

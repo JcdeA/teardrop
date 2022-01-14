@@ -1,0 +1,19 @@
+---
+- name: Assemble Consul & Nomad cluster (bos)
+  hosts: bos
+  any_errors_fatal: true
+  become: true
+  become_user: root
+  roles:
+    - ansible-consul
+    - ansible-nomad
+  vars: 
+    consul_iface: wg0
+    consul_dnsmasq_local_service: true
+    consul_group_name: bos
+    nomad_iface: wg0
+    nomad_group_name: bos
+    nomad_docker_enable: true
+    nomad_network_interface: wg0
+
+

@@ -20,16 +20,18 @@ func NewNomadClient(address string) (*NomadClient, error) {
 	return &NomadClient{client}, nil
 }
 
-func (n *NomadClient) NewDeployment(run models.Run, runId int) {
-	config := make(map[string]interface{})
-	config["image"] = run.Project.ContainerImage
+func (n *NomadClient) NewDeployment(run models.Run, runId int) error {
+	config := models.Map{
+		"image": run.Project.ContainerImage,
+		"ports": []string{"http"},
+	}
 
 	resources := &nomad.Resources{
-		CPU:      pointer.ToInt(1024),
+		CPU:      pointer.ToInt(5),
 		MemoryMB: pointer.ToInt(128),
 	}
 	task := &nomad.Task{
-		Name:      run.Name,
+		Name:      "testgroup",
 		Driver:    "docker",
 		Config:    config,
 		Resources: resources,
@@ -38,19 +40,30 @@ func (n *NomadClient) NewDeployment(run models.Run, runId int) {
 		Name:  pointer.ToString(run.Name),
 		Count: pointer.ToInt(1),
 		Tasks: []*nomad.Task{task},
+		Networks: []*nomad.NetworkResource{
+			{
+				DynamicPorts: []nomad.Port{
+					{Label: "http", To: 80},
+				},
+			},
+		},
 	}
 	job := &nomad.Job{
-		ID:          pointer.ToString(fmt.Sprint(run.Id)),
 		Name:        pointer.ToString(run.Name),
 		Region:      pointer.ToString("global"),
 		Priority:    pointer.ToInt(20),
-		Datacenters: []string{"dc1"},
+		Datacenters: []string{"bos"},
 		Type:        pointer.ToString("batch"),
 		TaskGroups:  []*nomad.TaskGroup{group},
+		ID:          pointer.ToString(fmt.Sprintf("%d", run.Id)),
 	}
 	if _, _, err := n.Jobs().Validate(job, nil); err != nil {
 		fmt.Printf("Nomad job validation failed. Error: %v\n", err)
 	}
-	n.Jobs().Register(job, nil)
+	_, _, err := n.Jobs().Register(job, nil)
+	if err != nil {
+		return err
+	}
+	return nil
 
 }
