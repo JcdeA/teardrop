@@ -1,46 +1,61 @@
 ---
-- name: Update to Debian 11
-  hosts: all
-  tasks:
-    - name: Update sources.list to Debian 11
-      copy:  
-        content: |
-          deb http://deb.debian.org/debian bullseye main
-          deb-src http://deb.debian.org/debian bullseye main
-
-          deb http://deb.debian.org/debian-security/ bullseye-security main
-          deb-src http://deb.debian.org/debian-security/ bullseye-security main
-
-          deb http://deb.debian.org/debian bullseye-updates main
-          deb-src http://deb.debian.org/debian bullseye-updates main
-        dest: /etc/apt/sources.list
-
-    - name: Run the equivalent of "apt-get update" as a separate step
-      apt:
-        update_cache: yes
+# - name: Update
+#   hosts: all
+#   vars: 
+#     - ansible_user: root
+#   tasks:
+#     - name: Run the equivalent of "apt-get update" as a separate step
+#       apt:
+#         update_cache: yes
 
     
-    - name: Upgrade the OS (apt-get dist-upgrade)
-      apt:
-        upgrade: dist
+#     - name: Upgrade the OS (apt-get dist-upgrade)
+#       apt:
+#         upgrade: dist
     
-    - name: Check if reboot needed
-      stat: path=/var/run/reboot-required
-      register: file_reboot_required
+#     - name: Check if reboot needed
+#       stat: path=/var/run/reboot-required
+#       register: file_reboot_required
 
     
-    - name: Wait for server to restart
-      reboot:
-        reboot_timeout: 3600
-      
-      when: file_reboot_required.stat.exists
+#     - name: Wait for server to restart
+#       reboot:
+#         reboot_timeout: 3600
+#       when: file_reboot_required.stat.exists
+
+
+- name: Create teardrop user
+  hosts: bos
+  vars:
+    - ansible_user: root
+  become: true
+  tasks: 
+    - name: add docker group
+      group:
+        name: docker
+        state: present
+
+    - name: Create teardrop user
+      user:
+        name: teardrop
+        password: $6$1lSSpUnsHgPkP6EG$bO5GbrS.GM0Mp3iMi1YYXXFosZN8N0TT0aJrVrr4Aepc.PioJS7BOUBcMAMjLnqR82kPMjP4VYe6w853MsF0Y0
+        groups:
+          - sudo
+          - docker
+        state: present
+    - name: Set authorized keys taken from url
+      ansible.posix.authorized_key:
+        user: teardrop
+        state: present
+        key: https://github.com/jcdea.keys
+
 
 - name: Install & set up Docker 
   hosts: bos
-  become: true
-  become_user: root
+
   vars:
     docker_edition: ce
+    ansible_user: root
     docker_apt_arch: arm64
     docker_daemon_options:
       userns-remap: "default"
@@ -48,3 +63,4 @@
   roles:
     - geerlingguy.docker
 
+      

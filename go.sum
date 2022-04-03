@@ -281,6 +281,8 @@ github.com/hashicorp/nomad/api v0.0.0-20211025192338-8a35232704c9 h1:KGsYXzc+vXI
 github.com/hashicorp/nomad/api v0.0.0-20211025192338-8a35232704c9/go.mod h1:vYHP9jMXk4/T2qNUbWlQ1OHCA1hHLil3nvqSmz8mtgc=
 github.com/hashicorp/nomad/api v0.0.0-20211201170748-189806f64311 h1:Xq2TJpEz94iA0CDSiB+6H40C2DdqDuzHf9n73P2p/ho=
 github.com/hashicorp/nomad/api v0.0.0-20211201170748-189806f64311/go.mod h1:frsh5Spaei4BAuw3d9jnIxaL6H19UEIVvZRk0IVJ70Y=
+github.com/hashicorp/nomad/api v0.0.0-20220114190254-fcd86e49a1b0 h1:g572tHjGKu5hW1F44I7fhJemlasjZKg4hxjcw//hDdA=
+github.com/hashicorp/nomad/api v0.0.0-20220114190254-fcd86e49a1b0/go.mod h1:frsh5Spaei4BAuw3d9jnIxaL6H19UEIVvZRk0IVJ70Y=
 github.com/hashicorp/serf v0.8.2/go.mod h1:6hOLApaqBFA1NXqRQAsxw9QxuDEvNxSQRwA/JwenrHc=
 github.com/hashicorp/serf v0.9.5/go.mod h1:UWDWwZeL5cuWDJdl0C6wrvrUwEqtQ4ZKBKKENpqIUyk=
 github.com/ianlancetaylor/demangle v0.0.0-20181102032728-5e5cf60278f6/go.mod h1:aSSvb/t6k1mPoxDqO4vJh6VOCGPwU4O0C2/Eqndh1Sc=

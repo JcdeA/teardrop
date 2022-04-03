@@ -12,5 +12,4 @@
 - src: githubixx.ansible_role_wireguard
   name: ansible-wg
 
-- src:  geerlingguy.docker_arm
-
+- src:  geerlingguy.docker

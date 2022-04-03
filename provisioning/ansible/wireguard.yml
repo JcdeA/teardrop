@@ -1,8 +1,8 @@
 ---
 - name: Wiregaurd setup
   hosts: all
-  become: true
-  become_user: root
+  vars:
+    - ansible_user: root
   tasks:
     - name: Enable ip forwarding
       sysctl:

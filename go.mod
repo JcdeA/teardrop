@@ -6,7 +6,7 @@ require (
 	github.com/AlekSi/pointer v1.2.0
 	github.com/gofiber/fiber/v2 v2.22.0
 	github.com/google/go-github/v39 v39.2.0
-	github.com/hashicorp/nomad/api v0.0.0-20211201170748-189806f64311
+	github.com/hashicorp/nomad/api v0.0.0-20220114190254-fcd86e49a1b0
 	github.com/joho/godotenv v1.4.0
 	github.com/labstack/echo/v4 v4.6.1
 	github.com/natesales/aarch64-client-go v0.0.0-20210830043747-6b9fdca9b7f5

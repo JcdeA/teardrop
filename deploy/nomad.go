@@ -2,6 +2,7 @@ package deploy
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/AlekSi/pointer"
 	"github.com/fosshostorg/teardrop/models"
@@ -22,8 +23,9 @@ func NewNomadClient(address string) (*NomadClient, error) {
 
 func (n *NomadClient) NewDeployment(run models.Run, runId int) error {
 	config := models.Map{
-		"image": run.Project.ContainerImage,
-		"ports": []string{"http"},
+		"image":        run.Project.ContainerImage,
+		"ports":        []string{"http"},
+		"network_mode": "slirp4netns",
 	}
 
 	resources := &nomad.Resources{
@@ -32,13 +34,29 @@ func (n *NomadClient) NewDeployment(run models.Run, runId int) error {
 	}
 	task := &nomad.Task{
 		Name:      "testgroup",
-		Driver:    "docker",
+		Driver:    "podman",
 		Config:    config,
 		Resources: resources,
+		Env:       map[string]string{"PORT": "${NOMAD_PORT_http}"},
 	}
+
 	group := &nomad.TaskGroup{
-		Name:  pointer.ToString(run.Name),
-		Count: pointer.ToInt(1),
+		Name:  pointer.ToString("demo"),
+		Count: pointer.ToInt(3),
+		Services: []*nomad.Service{
+			{
+				Name:      "demo-webapp",
+				PortLabel: "http",
+				Checks: []nomad.ServiceCheck{
+					{
+						Type:     "http",
+						Path:     "/",
+						Interval: time.Second * 10,
+						Timeout:  time.Second * 2,
+					},
+				},
+			},
+		},
 		Tasks: []*nomad.Task{task},
 		Networks: []*nomad.NetworkResource{
 			{
@@ -49,7 +67,7 @@ func (n *NomadClient) NewDeployment(run models.Run, runId int) error {
 		},
 	}
 	job := &nomad.Job{
-		Name:        pointer.ToString(run.Name),
+		Name:        pointer.ToString("demo-webapp"),
 		Region:      pointer.ToString("global"),
 		Priority:    pointer.ToInt(20),
 		Datacenters: []string{"bos"},

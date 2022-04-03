@@ -22,13 +22,24 @@ THE SOFTWARE.
 package main
 
 import (
-	"github.com/fosshostorg/teardrop/api"
+	"os"
+
+	"github.com/fosshostorg/teardrop/provisioning"
 	"github.com/joho/godotenv"
 )
 
 func main() {
 	godotenv.Load(".env.testing")
+	c := provisioning.NewA64Client(os.Getenv("AARCH64_APIKEY"))
+	vms, _ := c.GetVMs()
+	for _, vm := range vms {
+		println("lmao")
+		provisioning.CopyKeys(vm, []string{"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAII4bZze3gL2J7AiL7AT4dUMg/vZY71Hd9DW92Wmmcn/2",
+			"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIJYokzEKkIYgmaA2rejRP68ZR+f+/R+PCfB+Olmn+2wR",
+			"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIL0ciASK3DsPi9Nl52YbhoJTSYrk5s+Y1JjAL2eKuxqE",
+			"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICIt5CNW7Ozr1ITLRwimORCMdoA94YmtGLD7bWNtxc/N"})
+	}
 
-	api.StartAPI()
+	//api.StartAPI()
 
 }

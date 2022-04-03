@@ -1,9 +1,8 @@
 ---
 - name: Assemble Consul & Nomad cluster (bos)
   hosts: bos
-  any_errors_fatal: true
   become: true
-  become_user: root
+  any_errors_fatal: true
   roles:
     - ansible-consul
     - ansible-nomad
@@ -13,7 +12,14 @@
     consul_group_name: bos
     nomad_iface: wg0
     nomad_group_name: bos
-    nomad_docker_enable: true
+    nomad_podman_enable: true
     nomad_network_interface: wg0
+    nomad_cni_enable: true
+    nomad_host_networks:
+    - name: public
+      interface: eth0
+      reserved_ports: 22
+    consul_connect_enabled: true
+    consul_dnsmasq_enable: true
 
 
