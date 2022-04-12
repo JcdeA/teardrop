@@ -3,7 +3,7 @@ package api
 import (
 	"io/ioutil"
 
-	"github.com/fosshostorg/teardrop/models"
+	"github.com/fosshostorg/teardrop/internal/pkg/models"
 	"github.com/pkg/errors"
 	"gopkg.in/yaml.v2"
 )

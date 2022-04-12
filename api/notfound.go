@@ -1,8 +1,8 @@
 package api
 
 import (
-	"github.com/fosshostorg/teardrop/api/response"
-	"github.com/fosshostorg/teardrop/models"
+	"github.com/fosshostorg/teardrop/internal/pkg/response"
+	"github.com/fosshostorg/teardrop/internal/pkg/models"
 	"github.com/labstack/echo/v4"
 )
 

@@ -3,12 +3,12 @@ package api
 import (
 	"time"
 
-	"github.com/fosshostorg/teardrop/api/deployments"
-	"github.com/fosshostorg/teardrop/api/webhook"
-	"github.com/fosshostorg/teardrop/deploy"
-	"github.com/fosshostorg/teardrop/models"
+	"github.com/fosshostorg/teardrop/api/routes/deployments"
+	"github.com/fosshostorg/teardrop/api/routes/webhook"
+	"github.com/fosshostorg/teardrop/internal/pkg/deploy"
+	"github.com/fosshostorg/teardrop/internal/pkg/models"
 
-	"github.com/fosshostorg/teardrop/api/auth"
+	"github.com/fosshostorg/teardrop/api/routes/auth"
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
 	"github.com/palantir/go-githubapp/githubapp"
