@@ -1,35 +1,32 @@
 ---
 # - name: Update
 #   hosts: all
-#   vars: 
+#   vars:
 #     - ansible_user: root
 #   tasks:
 #     - name: Run the equivalent of "apt-get update" as a separate step
 #       apt:
 #         update_cache: yes
 
-    
 #     - name: Upgrade the OS (apt-get dist-upgrade)
 #       apt:
 #         upgrade: dist
-    
+
 #     - name: Check if reboot needed
 #       stat: path=/var/run/reboot-required
 #       register: file_reboot_required
 
-    
 #     - name: Wait for server to restart
 #       reboot:
 #         reboot_timeout: 3600
 #       when: file_reboot_required.stat.exists
-
 
 - name: Create teardrop user
   hosts: bos
   vars:
     - ansible_user: root
   become: true
-  tasks: 
+  tasks:
     - name: add docker group
       group:
         name: docker
@@ -49,8 +46,7 @@
         state: present
         key: https://github.com/jcdea.keys
 
-
-- name: Install & set up Docker 
+- name: Install & set up Docker
   hosts: bos
 
   vars:
@@ -63,4 +59,41 @@
   roles:
     - geerlingguy.docker
 
-      
+- name: Install & set up caddy-ansible
+  hosts: bos
+  roles:
+    - role: caddy_ansible.caddy_ansible
+      caddy_config: |
+        {
+          storage consul {
+            address      "127.0.0.1:8500"
+            timeout      10
+            prefix       "caddytls"
+            tls_enabled  "false"
+            tls_insecure "true"
+          }
+
+          servers :443 {
+            protocol {
+              experimental_http3
+            }
+          }
+        }
+
+        https:// {
+          reverse_proxy https://127.0.0.1:8080 {
+            header_up Host {upstream_hostport}
+            header_up X-Forwarded-Host {host}
+          }
+
+          tls {
+            on_demand
+          }
+
+          log {
+            output file /var/log/caddy/access.log
+          }
+        }
+
+  vars:
+    ansible_user: root

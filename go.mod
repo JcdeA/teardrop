@@ -8,7 +8,7 @@ require (
 	github.com/google/go-github/v39 v39.2.0
 	github.com/hashicorp/nomad/api v0.0.0-20220114190254-fcd86e49a1b0
 	github.com/joho/godotenv v1.4.0
-	github.com/labstack/echo/v4 v4.6.1
+	github.com/labstack/echo/v4 v4.7.2
 	github.com/natesales/aarch64-client-go v0.0.0-20210830043747-6b9fdca9b7f5
 	github.com/palantir/go-githubapp v0.10.0
 	github.com/pkg/errors v0.9.1
@@ -17,6 +17,20 @@ require (
 	go.mongodb.org/mongo-driver v1.8.0
 	golang.org/x/crypto v0.0.0-20211117183948-ae814b36b871
 	gopkg.in/yaml.v2 v2.4.0
+)
+
+require (
+	github.com/cespare/xxhash/v2 v2.1.2 // indirect
+	github.com/creack/pty v1.1.18 // indirect
+	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
+	github.com/go-redis/cache/v8 v8.4.3 // indirect
+	github.com/go-redis/redis/v8 v8.11.5 // indirect
+	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
+	github.com/vmihailenco/go-tinylfu v0.2.2 // indirect
+	github.com/vmihailenco/msgpack/v5 v5.3.4 // indirect
+	github.com/vmihailenco/tagparser/v2 v2.0.0 // indirect
+	golang.org/x/exp v0.0.0-20210916165020-5cb4fee858ee // indirect
+	golang.org/x/time v0.0.0-20201208040808-7e3f01d25324 // indirect
 )
 
 require (
@@ -31,7 +45,7 @@ require (
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/go-github/v40 v40.0.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
-	github.com/gorilla/websocket v1.4.2 // indirect
+	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/gregjones/httpcache v0.0.0-20190611155906-901d90724c79 // indirect
 	github.com/hashicorp/cronexpr v1.1.1 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
@@ -65,10 +79,10 @@ require (
 	github.com/xdg-go/scram v1.0.2 // indirect
 	github.com/xdg-go/stringprep v1.0.2 // indirect
 	github.com/youmark/pkcs8 v0.0.0-20201027041543-1326539a0a0a // indirect
-	golang.org/x/net v0.0.0-20211201190559-0a0e4e1bb54c // indirect
+	golang.org/x/net v0.0.0-20220412020605-290c469a71a5 // indirect
 	golang.org/x/oauth2 v0.0.0-20211104180415-d3ed0bb246c8 // indirect
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c // indirect
-	golang.org/x/sys v0.0.0-20211124211545-fe61309f8881 // indirect
+	golang.org/x/sys v0.0.0-20211216021012-1d35b9e2eb4e // indirect
 	golang.org/x/text v0.3.7 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/protobuf v1.27.1 // indirect

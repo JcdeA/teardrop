@@ -3,7 +3,7 @@ package auth
 import (
 	"net/http"
 
-	"github.com/fosshostorg/teardrop/models"
+	"github.com/fosshostorg/teardrop/internal/pkg/models"
 	"github.com/google/go-github/github"
 
 	"github.com/labstack/echo/v4"

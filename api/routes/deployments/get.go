@@ -1,15 +1,12 @@
 package deployments
 
 import (
-	"fmt"
-
-	"github.com/fosshostorg/teardrop/api/response"
-	"github.com/fosshostorg/teardrop/models"
+	"github.com/fosshostorg/teardrop/internal/pkg/response"
 
 	"github.com/labstack/echo/v4"
 )
 
 func Get(c echo.Context) error {
 
-	return response.Respond(c, models.Response{Message: fmt.Sprintf("No deployments found for user %v", "placeholder@example.com")})
+	return response.RespondError(c, *echo.ErrNotFound)
 }

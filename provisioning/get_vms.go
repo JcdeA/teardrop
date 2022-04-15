@@ -4,7 +4,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/fosshostorg/teardrop/models"
+	"github.com/fosshostorg/teardrop/internal/pkg/models"
 )
 
 func (ac *A64Client) GetVMs() ([]models.VM, error) {

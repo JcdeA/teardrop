@@ -26,14 +26,14 @@ Table = {{ wireguard_table }}
 PreUp = {{ wg_preup }}
 {% endfor %}
 {% endif %}
-{% if wireguard_predown is defined %}
-{% for wg_predown in wireguard_predown %}
-PreDown = {{ wg_predown }}
-{% endfor %}
-{% endif %}
 {% if wireguard_postup is defined %}
 {% for wg_postup in wireguard_postup %}
 PostUp = {{ wg_postup }}
+{% endfor %}
+{% endif %}
+{% if wireguard_predown is defined %}
+{% for wg_predown in wireguard_predown %}
+PreDown = {{ wg_predown }}
 {% endfor %}
 {% endif %}
 {% if wireguard_postdown is defined %}
@@ -42,7 +42,7 @@ PostDown = {{ wg_postdown }}
 {% endfor %}
 {% endif %}
 {% if wireguard_save_config is defined %}
-SaveConfig = true
+SaveConfig = {{ wireguard_save_config }}
 {% endif %}
 {% for host in ansible_play_hosts %}
 {%   if host != inventory_hostname %}
@@ -65,7 +65,7 @@ PersistentKeepalive = {{hostvars[host].wireguard_persistent_keepalive}}
        )
 %}
 Endpoint = {{hostvars[host].wireguard_dc['endpoint']}}:{{hostvars[host].wireguard_dc['port']}}
-{%     elif hostvars[host].wireguard_port is defined and hostvars[host].wireguard_port is number %}
+{%     elif hostvars[host].wireguard_port is defined %}
 {%       if hostvars[host].wireguard_endpoint is defined and hostvars[host].wireguard_endpoint != "" %}
 Endpoint = {{hostvars[host].wireguard_endpoint}}:{{hostvars[host].wireguard_port}}
 {%       else %}

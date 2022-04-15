@@ -12,4 +12,9 @@
 - src: githubixx.ansible_role_wireguard
   name: ansible-wg
 
-- src:  geerlingguy.docker
+- src: geerlingguy.docker
+
+- src: https://github.com/caddy-ansible/caddy-ansible
+  name: caddy-ansible
+  scm: git
+  version: master

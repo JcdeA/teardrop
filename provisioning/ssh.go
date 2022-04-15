@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/fosshostorg/teardrop/models"
+	"github.com/fosshostorg/teardrop/internal/pkg/models"
 	"golang.org/x/crypto/ssh"
 )
 

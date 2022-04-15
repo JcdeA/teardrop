@@ -1,12 +1,11 @@
 package api
 
 import (
+	"log"
 	"time"
 
 	"github.com/fosshostorg/teardrop/api/routes/deployments"
 	"github.com/fosshostorg/teardrop/api/routes/webhook"
-	"github.com/fosshostorg/teardrop/internal/pkg/deploy"
-	"github.com/fosshostorg/teardrop/internal/pkg/models"
 
 	"github.com/fosshostorg/teardrop/api/routes/auth"
 	"github.com/joho/godotenv"
@@ -23,15 +22,12 @@ func StartAPI() {
 	}
 	e := echo.New()
 
-	client, _ := deploy.NewNomadClient("http://10.8.0.101:4646")
-	err = client.NewDeployment(models.Run{Name: "hellohttp-2", Started: time.Now(), Environment: models.Production, Project: models.Project{ContainerImage: "nginxdemos/hello"}}, 31)
-
 	if err != nil {
 		panic(err)
 	}
 	registerRoutes(e, ghconfig.Github)
 
-	// log.Fatal(e.Start("0.0.0.0:3000"))
+	log.Fatal(e.Start("0.0.0.0:3000"))
 
 }
 
@@ -45,7 +41,7 @@ func registerRoutes(e *echo.Echo, c githubapp.Config) {
 		panic(err)
 	}
 	APIGroup := e.Group("/api")
-	APIGroup.GET("/deployments/get", deployments.Get)
+	APIGroup.GET("/deployments", deployments.Get)
 
 	APIGroup.Any("/auth/github", auth.GithubOAuthHandler(c))
 
@@ -55,5 +51,4 @@ func registerRoutes(e *echo.Echo, c githubapp.Config) {
 		)))
 	APIGroup.GET("/ping", ping)
 
-	echo.NotFoundHandler = notfound
 }

@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/AlekSi/pointer"
-	"github.com/fosshostorg/teardrop/models"
+	"github.com/fosshostorg/teardrop/internal/pkg/models"
 	nomad "github.com/hashicorp/nomad/api"
 )
 

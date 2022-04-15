@@ -10,14 +10,7 @@ type Response struct {
 }
 
 func (r *Response) ToMap() Map {
-
-	var returnStatus string
-	if (200 <= r.Status) && (r.Status < 300) {
-		returnStatus = "ok"
-	} else {
-		returnStatus = "error"
-	}
-	return Map{"documentation_url": r.DocumentationUrl, "message": r.Message, "data": r.Data, "status": returnStatus}
+	return Map{"documentation_url": r.DocumentationUrl, "message": r.Message, "data": r.Data, "status": r.Status}
 }
 
 func (r *Response) ToByteArray() ([]byte, error) {
