@@ -21,79 +21,79 @@
 #         reboot_timeout: 3600
 #       when: file_reboot_required.stat.exists
 
-- name: Create teardrop user
-  hosts: bos
-  vars:
-    - ansible_user: root
-  become: true
-  tasks:
-    - name: add docker group
-      group:
-        name: docker
-        state: present
+# - name: Create teardrop user
+#   hosts: bos
+#   vars:
+#     - ansible_user: root
+#   become: true
+#   tasks:
+#     - name: add docker group
+#       group:
+#         name: docker
+#         state: present
 
-    - name: Create teardrop user
-      user:
-        name: teardrop
-        password: $6$1lSSpUnsHgPkP6EG$bO5GbrS.GM0Mp3iMi1YYXXFosZN8N0TT0aJrVrr4Aepc.PioJS7BOUBcMAMjLnqR82kPMjP4VYe6w853MsF0Y0
-        groups:
-          - sudo
-          - docker
-        state: present
-    - name: Set authorized keys taken from url
-      ansible.posix.authorized_key:
-        user: teardrop
-        state: present
-        key: https://github.com/jcdea.keys
+#     - name: Create teardrop user
+#       user:
+#         name: teardrop
+#         password: $6$1lSSpUnsHgPkP6EG$bO5GbrS.GM0Mp3iMi1YYXXFosZN8N0TT0aJrVrr4Aepc.PioJS7BOUBcMAMjLnqR82kPMjP4VYe6w853MsF0Y0
+#         groups:
+#           - sudo
+#           - docker
+#         state: present
+#     - name: Set authorized keys taken from url
+#       ansible.posix.authorized_key:
+#         user: teardrop
+#         state: present
+#         key: https://github.com/jcdea.keys
 
-- name: Install & set up Docker
-  hosts: bos
+# - name: Install & set up Docker
+#   hosts: bos
 
-  vars:
-    docker_edition: ce
-    ansible_user: root
-    docker_apt_arch: arm64
-    docker_daemon_options:
-      userns-remap: "default"
-      storage-driver: "overlay2"
-  roles:
-    - geerlingguy.docker
+#   vars:
+#     docker_edition: ce
+#     ansible_user: root
+#     docker_apt_arch: arm64
+#     docker_daemon_options:
+#       userns-remap: "default"
+#       storage-driver: "overlay2"
+#   roles:
+#     - geerlingguy.docker
 
 - name: Install & set up caddy-ansible
   hosts: bos
   roles:
-    - role: caddy_ansible.caddy_ansible
-      caddy_config: |
-        {
-          storage consul {
-            address      "127.0.0.1:8500"
-            timeout      10
-            prefix       "caddytls"
-            tls_enabled  "false"
-            tls_insecure "true"
-          }
-
-          servers :443 {
-            protocol {
-              experimental_http3
-            }
-          }
+  - role: caddy-ansible
+    caddy_config: |
+      {
+        storage consul {
+          address      "127.0.0.1:8500"
+          timeout      10
+          prefix       "caddytls"
+          tls_enabled  "false"
+          tls_insecure "true"
         }
 
-        https:// {
-          reverse_proxy https://127.0.0.1:8080 {
-            header_up Host {upstream_hostport}
-            header_up X-Forwarded-Host {host}
-          }
-
-          tls {
-            on_demand
-          }
-
-          log {
-            output file /var/log/caddy/access.log
+        servers :443 {
+          protocol {
+            experimental_http3
           }
         }
+      }
+
+      https:// {
+        reverse_proxy https://127.0.0.1:8080 {
+          header_up Host {upstream_hostport}
+          header_up X-Forwarded-Host {host}
+        }
+
+        tls {
+          on_demand
+        }
+
+        log {
+          output file /var/log/caddy/access.log
+        }
+      }
 
   vars:
     ansible_user: root
