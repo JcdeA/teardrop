@@ -5,6 +5,8 @@ package ent
 import (
 	"time"
 
+	"github.com/fosshostorg/teardrop/ent/deployment"
+	"github.com/fosshostorg/teardrop/ent/domain"
 	"github.com/fosshostorg/teardrop/ent/project"
 	"github.com/fosshostorg/teardrop/ent/schema"
 	"github.com/fosshostorg/teardrop/ent/user"
@@ -14,14 +16,32 @@ import (
 // (default values, validators, hooks and policies) and stitches it
 // to their package variables.
 func init() {
+	deploymentFields := schema.Deployment{}.Fields()
+	_ = deploymentFields
+	// deploymentDescCreateAt is the schema descriptor for create_at field.
+	deploymentDescCreateAt := deploymentFields[3].Descriptor()
+	// deployment.DefaultCreateAt holds the default value on creation for the create_at field.
+	deployment.DefaultCreateAt = deploymentDescCreateAt.Default.(func() time.Time)
+	domainFields := schema.Domain{}.Fields()
+	_ = domainFields
+	// domainDescCreateAt is the schema descriptor for create_at field.
+	domainDescCreateAt := domainFields[2].Descriptor()
+	// domain.DefaultCreateAt holds the default value on creation for the create_at field.
+	domain.DefaultCreateAt = domainDescCreateAt.Default.(func() time.Time)
+	// domainDescUpdateAt is the schema descriptor for update_at field.
+	domainDescUpdateAt := domainFields[3].Descriptor()
+	// domain.DefaultUpdateAt holds the default value on creation for the update_at field.
+	domain.DefaultUpdateAt = domainDescUpdateAt.Default.(func() time.Time)
+	// domain.UpdateDefaultUpdateAt holds the default value on update for the update_at field.
+	domain.UpdateDefaultUpdateAt = domainDescUpdateAt.UpdateDefault.(func() time.Time)
 	projectFields := schema.Project{}.Fields()
 	_ = projectFields
 	// projectDescCreateAt is the schema descriptor for create_at field.
-	projectDescCreateAt := projectFields[4].Descriptor()
+	projectDescCreateAt := projectFields[3].Descriptor()
 	// project.DefaultCreateAt holds the default value on creation for the create_at field.
 	project.DefaultCreateAt = projectDescCreateAt.Default.(func() time.Time)
 	// projectDescUpdateAt is the schema descriptor for update_at field.
-	projectDescUpdateAt := projectFields[5].Descriptor()
+	projectDescUpdateAt := projectFields[4].Descriptor()
 	// project.DefaultUpdateAt holds the default value on creation for the update_at field.
 	project.DefaultUpdateAt = projectDescUpdateAt.Default.(func() time.Time)
 	// project.UpdateDefaultUpdateAt holds the default value on update for the update_at field.

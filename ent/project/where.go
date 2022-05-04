@@ -107,13 +107,6 @@ func Git(v string) predicate.Project {
 	})
 }
 
-// UserID applies equality check predicate on the "user_id" field. It's identical to UserIDEQ.
-func UserID(v int) predicate.Project {
-	return predicate.Project(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldUserID), v))
-	})
-}
-
 // DefaultBranch applies equality check predicate on the "default_branch" field. It's identical to DefaultBranchEQ.
 func DefaultBranch(v string) predicate.Project {
 	return predicate.Project(func(s *sql.Selector) {
@@ -354,54 +347,6 @@ func GitEqualFold(v string) predicate.Project {
 func GitContainsFold(v string) predicate.Project {
 	return predicate.Project(func(s *sql.Selector) {
 		s.Where(sql.ContainsFold(s.C(FieldGit), v))
-	})
-}
-
-// UserIDEQ applies the EQ predicate on the "user_id" field.
-func UserIDEQ(v int) predicate.Project {
-	return predicate.Project(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldUserID), v))
-	})
-}
-
-// UserIDNEQ applies the NEQ predicate on the "user_id" field.
-func UserIDNEQ(v int) predicate.Project {
-	return predicate.Project(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldUserID), v))
-	})
-}
-
-// UserIDIn applies the In predicate on the "user_id" field.
-func UserIDIn(vs ...int) predicate.Project {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Project(func(s *sql.Selector) {
-		// if not arguments were provided, append the FALSE constants,
-		// since we can't apply "IN ()". This will make this predicate falsy.
-		if len(v) == 0 {
-			s.Where(sql.False())
-			return
-		}
-		s.Where(sql.In(s.C(FieldUserID), v...))
-	})
-}
-
-// UserIDNotIn applies the NotIn predicate on the "user_id" field.
-func UserIDNotIn(vs ...int) predicate.Project {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Project(func(s *sql.Selector) {
-		// if not arguments were provided, append the FALSE constants,
-		// since we can't apply "IN ()". This will make this predicate falsy.
-		if len(v) == 0 {
-			s.Where(sql.False())
-			return
-		}
-		s.Where(sql.NotIn(s.C(FieldUserID), v...))
 	})
 }
 
@@ -674,7 +619,7 @@ func HasUsers() predicate.Project {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
 			sqlgraph.To(UsersTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, UsersTable, UsersColumn),
+			sqlgraph.Edge(sqlgraph.M2M, false, UsersTable, UsersPrimaryKey...),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
@@ -686,7 +631,35 @@ func HasUsersWith(preds ...predicate.User) predicate.Project {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
 			sqlgraph.To(UsersInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, UsersTable, UsersColumn),
+			sqlgraph.Edge(sqlgraph.M2M, false, UsersTable, UsersPrimaryKey...),
+		)
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasDeployments applies the HasEdge predicate on the "deployments" edge.
+func HasDeployments() predicate.Project {
+	return predicate.Project(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(DeploymentsTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, DeploymentsTable, DeploymentsColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasDeploymentsWith applies the HasEdge predicate on the "deployments" edge with a given conditions (other predicates).
+func HasDeploymentsWith(preds ...predicate.Deployment) predicate.Project {
+	return predicate.Project(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(DeploymentsInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, DeploymentsTable, DeploymentsColumn),
 		)
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {

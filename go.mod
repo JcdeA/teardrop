@@ -33,6 +33,8 @@ require (
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/google/go-cmp v0.5.6 // indirect
 	github.com/google/uuid v1.3.0 // indirect
+	github.com/gorilla/csrf v1.7.1 // indirect
+	github.com/gorilla/securecookie v1.1.1 // indirect
 	github.com/hashicorp/hcl/v2 v2.10.0 // indirect
 	github.com/mattn/go-runewidth v0.0.9 // indirect
 	github.com/mitchellh/go-wordwrap v0.0.0-20150314170334-ad45545899c7 // indirect
@@ -73,6 +75,7 @@ require (
 	github.com/magiconair/properties v1.8.5 // indirect
 	github.com/mattn/go-colorable v0.1.12 // indirect
 	github.com/mattn/go-isatty v0.0.14 // indirect
+	github.com/mattn/go-sqlite3 v1.14.12
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/mapstructure v1.4.3 // indirect
 	github.com/pelletier/go-toml v1.9.4 // indirect

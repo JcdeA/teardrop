@@ -18,10 +18,10 @@ type User struct {
 func (User) Fields() []ent.Field {
 	return []ent.Field{
 		field.String("name").SchemaType(map[string]string{
-			dialect.MySQL: "varchar(10)",
+			dialect.MySQL: "varchar(30)",
 		}),
 		field.String("email").SchemaType(map[string]string{
-			dialect.MySQL: "varchar(20)",
+			dialect.MySQL: "varchar(69)",
 		}),
 		field.Time("create_at").Default(time.Now),
 		field.Time("update_at").Default(time.Now).UpdateDefault(time.Now),
@@ -31,6 +31,6 @@ func (User) Fields() []ent.Field {
 // Edges of the User.
 func (User) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.To("projects", Project.Type),
+		edge.From("projects", Project.Type).Ref("users"),
 	}
 }

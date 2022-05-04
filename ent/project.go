@@ -9,7 +9,6 @@ import (
 
 	"entgo.io/ent/dialect/sql"
 	"github.com/fosshostorg/teardrop/ent/project"
-	"github.com/fosshostorg/teardrop/ent/user"
 )
 
 // Project is the model entity for the Project schema.
@@ -21,8 +20,6 @@ type Project struct {
 	Name string `json:"name,omitempty"`
 	// Git holds the value of the "git" field.
 	Git string `json:"git,omitempty"`
-	// UserID holds the value of the "user_id" field.
-	UserID int `json:"user_id,omitempty"`
 	// DefaultBranch holds the value of the "default_branch" field.
 	DefaultBranch string `json:"default_branch,omitempty"`
 	// CreateAt holds the value of the "create_at" field.
@@ -31,30 +28,37 @@ type Project struct {
 	UpdateAt time.Time `json:"update_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the ProjectQuery when eager-loading is set.
-	Edges ProjectEdges `json:"edges"`
+	Edges               ProjectEdges `json:"edges"`
+	deployment_projects *string
 }
 
 // ProjectEdges holds the relations/edges for other nodes in the graph.
 type ProjectEdges struct {
 	// Users holds the value of the users edge.
-	Users *User `json:"users,omitempty"`
+	Users []*User `json:"users,omitempty"`
+	// Deployments holds the value of the deployments edge.
+	Deployments []*Deployment `json:"deployments,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [1]bool
+	loadedTypes [2]bool
 }
 
 // UsersOrErr returns the Users value or an error if the edge
-// was not loaded in eager-loading, or loaded but was not found.
-func (e ProjectEdges) UsersOrErr() (*User, error) {
+// was not loaded in eager-loading.
+func (e ProjectEdges) UsersOrErr() ([]*User, error) {
 	if e.loadedTypes[0] {
-		if e.Users == nil {
-			// The edge users was loaded in eager-loading,
-			// but was not found.
-			return nil, &NotFoundError{label: user.Label}
-		}
 		return e.Users, nil
 	}
 	return nil, &NotLoadedError{edge: "users"}
+}
+
+// DeploymentsOrErr returns the Deployments value or an error if the edge
+// was not loaded in eager-loading.
+func (e ProjectEdges) DeploymentsOrErr() ([]*Deployment, error) {
+	if e.loadedTypes[1] {
+		return e.Deployments, nil
+	}
+	return nil, &NotLoadedError{edge: "deployments"}
 }
 
 // scanValues returns the types for scanning values from sql.Rows.
@@ -62,12 +66,14 @@ func (*Project) scanValues(columns []string) ([]interface{}, error) {
 	values := make([]interface{}, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case project.FieldID, project.FieldUserID:
+		case project.FieldID:
 			values[i] = new(sql.NullInt64)
 		case project.FieldName, project.FieldGit, project.FieldDefaultBranch:
 			values[i] = new(sql.NullString)
 		case project.FieldCreateAt, project.FieldUpdateAt:
 			values[i] = new(sql.NullTime)
+		case project.ForeignKeys[0]: // deployment_projects
+			values[i] = new(sql.NullString)
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type Project", columns[i])
 		}
@@ -101,12 +107,6 @@ func (pr *Project) assignValues(columns []string, values []interface{}) error {
 			} else if value.Valid {
 				pr.Git = value.String
 			}
-		case project.FieldUserID:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field user_id", values[i])
-			} else if value.Valid {
-				pr.UserID = int(value.Int64)
-			}
 		case project.FieldDefaultBranch:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field default_branch", values[i])
@@ -125,6 +125,13 @@ func (pr *Project) assignValues(columns []string, values []interface{}) error {
 			} else if value.Valid {
 				pr.UpdateAt = value.Time
 			}
+		case project.ForeignKeys[0]:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field deployment_projects", values[i])
+			} else if value.Valid {
+				pr.deployment_projects = new(string)
+				*pr.deployment_projects = value.String
+			}
 		}
 	}
 	return nil
@@ -133,6 +140,11 @@ func (pr *Project) assignValues(columns []string, values []interface{}) error {
 // QueryUsers queries the "users" edge of the Project entity.
 func (pr *Project) QueryUsers() *UserQuery {
 	return (&ProjectClient{config: pr.config}).QueryUsers(pr)
+}
+
+// QueryDeployments queries the "deployments" edge of the Project entity.
+func (pr *Project) QueryDeployments() *DeploymentQuery {
+	return (&ProjectClient{config: pr.config}).QueryDeployments(pr)
 }
 
 // Update returns a builder for updating this Project.
@@ -162,8 +174,6 @@ func (pr *Project) String() string {
 	builder.WriteString(pr.Name)
 	builder.WriteString(", git=")
 	builder.WriteString(pr.Git)
-	builder.WriteString(", user_id=")
-	builder.WriteString(fmt.Sprintf("%v", pr.UserID))
 	builder.WriteString(", default_branch=")
 	builder.WriteString(pr.DefaultBranch)
 	builder.WriteString(", create_at=")

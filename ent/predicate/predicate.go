@@ -6,6 +6,12 @@ import (
 	"entgo.io/ent/dialect/sql"
 )
 
+// Deployment is the predicate function for deployment builders.
+type Deployment func(*sql.Selector)
+
+// Domain is the predicate function for domain builders.
+type Domain func(*sql.Selector)
+
 // Project is the predicate function for project builders.
 type Project func(*sql.Selector)
 

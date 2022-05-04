@@ -18,7 +18,6 @@ func (Project) Fields() []ent.Field {
 	return []ent.Field{
 		field.String("name"),
 		field.String("git"),
-		field.Int("user_id"),
 		field.String("default_branch"),
 		field.Time("create_at").Default(time.Now),
 		field.Time("update_at").Default(time.Now).UpdateDefault(time.Now),
@@ -28,9 +27,7 @@ func (Project) Fields() []ent.Field {
 // Edges of the Project.
 func (Project) Edges() []ent.Edge {
 	return []ent.Edge{
-		edge.From("users", User.Type).
-			Ref("projects").
-			Unique().
-			Field("user_id").Required(),
+		edge.To("users", User.Type),
+		edge.To("deployments", Deployment.Type),
 	}
 }

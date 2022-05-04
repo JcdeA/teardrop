@@ -501,7 +501,7 @@ func HasProjects() predicate.User {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
 			sqlgraph.To(ProjectsTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, ProjectsTable, ProjectsColumn),
+			sqlgraph.Edge(sqlgraph.M2M, true, ProjectsTable, ProjectsPrimaryKey...),
 		)
 		sqlgraph.HasNeighbors(s, step)
 	})
@@ -513,7 +513,7 @@ func HasProjectsWith(preds ...predicate.Project) predicate.User {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(Table, FieldID),
 			sqlgraph.To(ProjectsInverseTable, FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, ProjectsTable, ProjectsColumn),
+			sqlgraph.Edge(sqlgraph.M2M, true, ProjectsTable, ProjectsPrimaryKey...),
 		)
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {

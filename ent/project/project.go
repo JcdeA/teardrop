@@ -15,8 +15,6 @@ const (
 	FieldName = "name"
 	// FieldGit holds the string denoting the git field in the database.
 	FieldGit = "git"
-	// FieldUserID holds the string denoting the user_id field in the database.
-	FieldUserID = "user_id"
 	// FieldDefaultBranch holds the string denoting the default_branch field in the database.
 	FieldDefaultBranch = "default_branch"
 	// FieldCreateAt holds the string denoting the create_at field in the database.
@@ -25,15 +23,22 @@ const (
 	FieldUpdateAt = "update_at"
 	// EdgeUsers holds the string denoting the users edge name in mutations.
 	EdgeUsers = "users"
+	// EdgeDeployments holds the string denoting the deployments edge name in mutations.
+	EdgeDeployments = "deployments"
 	// Table holds the table name of the project in the database.
 	Table = "projects"
-	// UsersTable is the table that holds the users relation/edge.
-	UsersTable = "projects"
+	// UsersTable is the table that holds the users relation/edge. The primary key declared below.
+	UsersTable = "project_users"
 	// UsersInverseTable is the table name for the User entity.
 	// It exists in this package in order to avoid circular dependency with the "user" package.
 	UsersInverseTable = "users"
-	// UsersColumn is the table column denoting the users relation/edge.
-	UsersColumn = "user_id"
+	// DeploymentsTable is the table that holds the deployments relation/edge.
+	DeploymentsTable = "deployments"
+	// DeploymentsInverseTable is the table name for the Deployment entity.
+	// It exists in this package in order to avoid circular dependency with the "deployment" package.
+	DeploymentsInverseTable = "deployments"
+	// DeploymentsColumn is the table column denoting the deployments relation/edge.
+	DeploymentsColumn = "project_deployments"
 )
 
 // Columns holds all SQL columns for project fields.
@@ -41,16 +46,32 @@ var Columns = []string{
 	FieldID,
 	FieldName,
 	FieldGit,
-	FieldUserID,
 	FieldDefaultBranch,
 	FieldCreateAt,
 	FieldUpdateAt,
 }
 
+// ForeignKeys holds the SQL foreign-keys that are owned by the "projects"
+// table and are not defined as standalone fields in the schema.
+var ForeignKeys = []string{
+	"deployment_projects",
+}
+
+var (
+	// UsersPrimaryKey and UsersColumn2 are the table columns denoting the
+	// primary key for the users relation (M2M).
+	UsersPrimaryKey = []string{"project_id", "user_id"}
+)
+
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {
 	for i := range Columns {
 		if column == Columns[i] {
+			return true
+		}
+	}
+	for i := range ForeignKeys {
+		if column == ForeignKeys[i] {
 			return true
 		}
 	}

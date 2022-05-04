@@ -9,6 +9,32 @@ import (
 	"github.com/fosshostorg/teardrop/ent"
 )
 
+// The DeploymentFunc type is an adapter to allow the use of ordinary
+// function as Deployment mutator.
+type DeploymentFunc func(context.Context, *ent.DeploymentMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f DeploymentFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	mv, ok := m.(*ent.DeploymentMutation)
+	if !ok {
+		return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.DeploymentMutation", m)
+	}
+	return f(ctx, mv)
+}
+
+// The DomainFunc type is an adapter to allow the use of ordinary
+// function as Domain mutator.
+type DomainFunc func(context.Context, *ent.DomainMutation) (ent.Value, error)
+
+// Mutate calls f(ctx, m).
+func (f DomainFunc) Mutate(ctx context.Context, m ent.Mutation) (ent.Value, error) {
+	mv, ok := m.(*ent.DomainMutation)
+	if !ok {
+		return nil, fmt.Errorf("unexpected mutation type %T. expect *ent.DomainMutation", m)
+	}
+	return f(ctx, mv)
+}
+
 // The ProjectFunc type is an adapter to allow the use of ordinary
 // function as Project mutator.
 type ProjectFunc func(context.Context, *ent.ProjectMutation) (ent.Value, error)

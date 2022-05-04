@@ -11,6 +11,7 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/fosshostorg/teardrop/ent/deployment"
 	"github.com/fosshostorg/teardrop/ent/predicate"
 	"github.com/fosshostorg/teardrop/ent/project"
 	"github.com/fosshostorg/teardrop/ent/user"
@@ -41,12 +42,6 @@ func (pu *ProjectUpdate) SetGit(s string) *ProjectUpdate {
 	return pu
 }
 
-// SetUserID sets the "user_id" field.
-func (pu *ProjectUpdate) SetUserID(i int) *ProjectUpdate {
-	pu.mutation.SetUserID(i)
-	return pu
-}
-
 // SetDefaultBranch sets the "default_branch" field.
 func (pu *ProjectUpdate) SetDefaultBranch(s string) *ProjectUpdate {
 	pu.mutation.SetDefaultBranch(s)
@@ -73,15 +68,34 @@ func (pu *ProjectUpdate) SetUpdateAt(t time.Time) *ProjectUpdate {
 	return pu
 }
 
-// SetUsersID sets the "users" edge to the User entity by ID.
-func (pu *ProjectUpdate) SetUsersID(id int) *ProjectUpdate {
-	pu.mutation.SetUsersID(id)
+// AddUserIDs adds the "users" edge to the User entity by IDs.
+func (pu *ProjectUpdate) AddUserIDs(ids ...int) *ProjectUpdate {
+	pu.mutation.AddUserIDs(ids...)
 	return pu
 }
 
-// SetUsers sets the "users" edge to the User entity.
-func (pu *ProjectUpdate) SetUsers(u *User) *ProjectUpdate {
-	return pu.SetUsersID(u.ID)
+// AddUsers adds the "users" edges to the User entity.
+func (pu *ProjectUpdate) AddUsers(u ...*User) *ProjectUpdate {
+	ids := make([]int, len(u))
+	for i := range u {
+		ids[i] = u[i].ID
+	}
+	return pu.AddUserIDs(ids...)
+}
+
+// AddDeploymentIDs adds the "deployments" edge to the Deployment entity by IDs.
+func (pu *ProjectUpdate) AddDeploymentIDs(ids ...string) *ProjectUpdate {
+	pu.mutation.AddDeploymentIDs(ids...)
+	return pu
+}
+
+// AddDeployments adds the "deployments" edges to the Deployment entity.
+func (pu *ProjectUpdate) AddDeployments(d ...*Deployment) *ProjectUpdate {
+	ids := make([]string, len(d))
+	for i := range d {
+		ids[i] = d[i].ID
+	}
+	return pu.AddDeploymentIDs(ids...)
 }
 
 // Mutation returns the ProjectMutation object of the builder.
@@ -89,10 +103,46 @@ func (pu *ProjectUpdate) Mutation() *ProjectMutation {
 	return pu.mutation
 }
 
-// ClearUsers clears the "users" edge to the User entity.
+// ClearUsers clears all "users" edges to the User entity.
 func (pu *ProjectUpdate) ClearUsers() *ProjectUpdate {
 	pu.mutation.ClearUsers()
 	return pu
+}
+
+// RemoveUserIDs removes the "users" edge to User entities by IDs.
+func (pu *ProjectUpdate) RemoveUserIDs(ids ...int) *ProjectUpdate {
+	pu.mutation.RemoveUserIDs(ids...)
+	return pu
+}
+
+// RemoveUsers removes "users" edges to User entities.
+func (pu *ProjectUpdate) RemoveUsers(u ...*User) *ProjectUpdate {
+	ids := make([]int, len(u))
+	for i := range u {
+		ids[i] = u[i].ID
+	}
+	return pu.RemoveUserIDs(ids...)
+}
+
+// ClearDeployments clears all "deployments" edges to the Deployment entity.
+func (pu *ProjectUpdate) ClearDeployments() *ProjectUpdate {
+	pu.mutation.ClearDeployments()
+	return pu
+}
+
+// RemoveDeploymentIDs removes the "deployments" edge to Deployment entities by IDs.
+func (pu *ProjectUpdate) RemoveDeploymentIDs(ids ...string) *ProjectUpdate {
+	pu.mutation.RemoveDeploymentIDs(ids...)
+	return pu
+}
+
+// RemoveDeployments removes "deployments" edges to Deployment entities.
+func (pu *ProjectUpdate) RemoveDeployments(d ...*Deployment) *ProjectUpdate {
+	ids := make([]string, len(d))
+	for i := range d {
+		ids[i] = d[i].ID
+	}
+	return pu.RemoveDeploymentIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -103,18 +153,12 @@ func (pu *ProjectUpdate) Save(ctx context.Context) (int, error) {
 	)
 	pu.defaults()
 	if len(pu.hooks) == 0 {
-		if err = pu.check(); err != nil {
-			return 0, err
-		}
 		affected, err = pu.sqlSave(ctx)
 	} else {
 		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 			mutation, ok := m.(*ProjectMutation)
 			if !ok {
 				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = pu.check(); err != nil {
-				return 0, err
 			}
 			pu.mutation = mutation
 			affected, err = pu.sqlSave(ctx)
@@ -162,14 +206,6 @@ func (pu *ProjectUpdate) defaults() {
 		v := project.UpdateDefaultUpdateAt()
 		pu.mutation.SetUpdateAt(v)
 	}
-}
-
-// check runs all checks and user-defined validators on the builder.
-func (pu *ProjectUpdate) check() error {
-	if _, ok := pu.mutation.UsersID(); pu.mutation.UsersCleared() && !ok {
-		return errors.New(`ent: clearing a required unique edge "Project.users"`)
-	}
-	return nil
 }
 
 func (pu *ProjectUpdate) sqlSave(ctx context.Context) (n int, err error) {
@@ -227,10 +263,10 @@ func (pu *ProjectUpdate) sqlSave(ctx context.Context) (n int, err error) {
 	}
 	if pu.mutation.UsersCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
 			Table:   project.UsersTable,
-			Columns: []string{project.UsersColumn},
+			Columns: project.UsersPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -241,17 +277,90 @@ func (pu *ProjectUpdate) sqlSave(ctx context.Context) (n int, err error) {
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := pu.mutation.UsersIDs(); len(nodes) > 0 {
+	if nodes := pu.mutation.RemovedUsersIDs(); len(nodes) > 0 && !pu.mutation.UsersCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
 			Table:   project.UsersTable,
-			Columns: []string{project.UsersColumn},
+			Columns: project.UsersPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeInt,
 					Column: user.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := pu.mutation.UsersIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   project.UsersTable,
+			Columns: project.UsersPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeInt,
+					Column: user.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if pu.mutation.DeploymentsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   project.DeploymentsTable,
+			Columns: []string{project.DeploymentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeString,
+					Column: deployment.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := pu.mutation.RemovedDeploymentsIDs(); len(nodes) > 0 && !pu.mutation.DeploymentsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   project.DeploymentsTable,
+			Columns: []string{project.DeploymentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeString,
+					Column: deployment.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := pu.mutation.DeploymentsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   project.DeploymentsTable,
+			Columns: []string{project.DeploymentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeString,
+					Column: deployment.FieldID,
 				},
 			},
 		}
@@ -291,12 +400,6 @@ func (puo *ProjectUpdateOne) SetGit(s string) *ProjectUpdateOne {
 	return puo
 }
 
-// SetUserID sets the "user_id" field.
-func (puo *ProjectUpdateOne) SetUserID(i int) *ProjectUpdateOne {
-	puo.mutation.SetUserID(i)
-	return puo
-}
-
 // SetDefaultBranch sets the "default_branch" field.
 func (puo *ProjectUpdateOne) SetDefaultBranch(s string) *ProjectUpdateOne {
 	puo.mutation.SetDefaultBranch(s)
@@ -323,15 +426,34 @@ func (puo *ProjectUpdateOne) SetUpdateAt(t time.Time) *ProjectUpdateOne {
 	return puo
 }
 
-// SetUsersID sets the "users" edge to the User entity by ID.
-func (puo *ProjectUpdateOne) SetUsersID(id int) *ProjectUpdateOne {
-	puo.mutation.SetUsersID(id)
+// AddUserIDs adds the "users" edge to the User entity by IDs.
+func (puo *ProjectUpdateOne) AddUserIDs(ids ...int) *ProjectUpdateOne {
+	puo.mutation.AddUserIDs(ids...)
 	return puo
 }
 
-// SetUsers sets the "users" edge to the User entity.
-func (puo *ProjectUpdateOne) SetUsers(u *User) *ProjectUpdateOne {
-	return puo.SetUsersID(u.ID)
+// AddUsers adds the "users" edges to the User entity.
+func (puo *ProjectUpdateOne) AddUsers(u ...*User) *ProjectUpdateOne {
+	ids := make([]int, len(u))
+	for i := range u {
+		ids[i] = u[i].ID
+	}
+	return puo.AddUserIDs(ids...)
+}
+
+// AddDeploymentIDs adds the "deployments" edge to the Deployment entity by IDs.
+func (puo *ProjectUpdateOne) AddDeploymentIDs(ids ...string) *ProjectUpdateOne {
+	puo.mutation.AddDeploymentIDs(ids...)
+	return puo
+}
+
+// AddDeployments adds the "deployments" edges to the Deployment entity.
+func (puo *ProjectUpdateOne) AddDeployments(d ...*Deployment) *ProjectUpdateOne {
+	ids := make([]string, len(d))
+	for i := range d {
+		ids[i] = d[i].ID
+	}
+	return puo.AddDeploymentIDs(ids...)
 }
 
 // Mutation returns the ProjectMutation object of the builder.
@@ -339,10 +461,46 @@ func (puo *ProjectUpdateOne) Mutation() *ProjectMutation {
 	return puo.mutation
 }
 
-// ClearUsers clears the "users" edge to the User entity.
+// ClearUsers clears all "users" edges to the User entity.
 func (puo *ProjectUpdateOne) ClearUsers() *ProjectUpdateOne {
 	puo.mutation.ClearUsers()
 	return puo
+}
+
+// RemoveUserIDs removes the "users" edge to User entities by IDs.
+func (puo *ProjectUpdateOne) RemoveUserIDs(ids ...int) *ProjectUpdateOne {
+	puo.mutation.RemoveUserIDs(ids...)
+	return puo
+}
+
+// RemoveUsers removes "users" edges to User entities.
+func (puo *ProjectUpdateOne) RemoveUsers(u ...*User) *ProjectUpdateOne {
+	ids := make([]int, len(u))
+	for i := range u {
+		ids[i] = u[i].ID
+	}
+	return puo.RemoveUserIDs(ids...)
+}
+
+// ClearDeployments clears all "deployments" edges to the Deployment entity.
+func (puo *ProjectUpdateOne) ClearDeployments() *ProjectUpdateOne {
+	puo.mutation.ClearDeployments()
+	return puo
+}
+
+// RemoveDeploymentIDs removes the "deployments" edge to Deployment entities by IDs.
+func (puo *ProjectUpdateOne) RemoveDeploymentIDs(ids ...string) *ProjectUpdateOne {
+	puo.mutation.RemoveDeploymentIDs(ids...)
+	return puo
+}
+
+// RemoveDeployments removes "deployments" edges to Deployment entities.
+func (puo *ProjectUpdateOne) RemoveDeployments(d ...*Deployment) *ProjectUpdateOne {
+	ids := make([]string, len(d))
+	for i := range d {
+		ids[i] = d[i].ID
+	}
+	return puo.RemoveDeploymentIDs(ids...)
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
@@ -360,18 +518,12 @@ func (puo *ProjectUpdateOne) Save(ctx context.Context) (*Project, error) {
 	)
 	puo.defaults()
 	if len(puo.hooks) == 0 {
-		if err = puo.check(); err != nil {
-			return nil, err
-		}
 		node, err = puo.sqlSave(ctx)
 	} else {
 		var mut Mutator = MutateFunc(func(ctx context.Context, m Mutation) (Value, error) {
 			mutation, ok := m.(*ProjectMutation)
 			if !ok {
 				return nil, fmt.Errorf("unexpected mutation type %T", m)
-			}
-			if err = puo.check(); err != nil {
-				return nil, err
 			}
 			puo.mutation = mutation
 			node, err = puo.sqlSave(ctx)
@@ -419,14 +571,6 @@ func (puo *ProjectUpdateOne) defaults() {
 		v := project.UpdateDefaultUpdateAt()
 		puo.mutation.SetUpdateAt(v)
 	}
-}
-
-// check runs all checks and user-defined validators on the builder.
-func (puo *ProjectUpdateOne) check() error {
-	if _, ok := puo.mutation.UsersID(); puo.mutation.UsersCleared() && !ok {
-		return errors.New(`ent: clearing a required unique edge "Project.users"`)
-	}
-	return nil
 }
 
 func (puo *ProjectUpdateOne) sqlSave(ctx context.Context) (_node *Project, err error) {
@@ -501,10 +645,10 @@ func (puo *ProjectUpdateOne) sqlSave(ctx context.Context) (_node *Project, err e
 	}
 	if puo.mutation.UsersCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
 			Table:   project.UsersTable,
-			Columns: []string{project.UsersColumn},
+			Columns: project.UsersPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -515,17 +659,90 @@ func (puo *ProjectUpdateOne) sqlSave(ctx context.Context) (_node *Project, err e
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := puo.mutation.UsersIDs(); len(nodes) > 0 {
+	if nodes := puo.mutation.RemovedUsersIDs(); len(nodes) > 0 && !puo.mutation.UsersCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
 			Table:   project.UsersTable,
-			Columns: []string{project.UsersColumn},
+			Columns: project.UsersPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
 					Type:   field.TypeInt,
 					Column: user.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := puo.mutation.UsersIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
+			Table:   project.UsersTable,
+			Columns: project.UsersPrimaryKey,
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeInt,
+					Column: user.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if puo.mutation.DeploymentsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   project.DeploymentsTable,
+			Columns: []string{project.DeploymentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeString,
+					Column: deployment.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := puo.mutation.RemovedDeploymentsIDs(); len(nodes) > 0 && !puo.mutation.DeploymentsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   project.DeploymentsTable,
+			Columns: []string{project.DeploymentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeString,
+					Column: deployment.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := puo.mutation.DeploymentsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   project.DeploymentsTable,
+			Columns: []string{project.DeploymentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeString,
+					Column: deployment.FieldID,
 				},
 			},
 		}

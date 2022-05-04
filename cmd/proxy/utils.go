@@ -42,7 +42,6 @@ func joinURLPath(a, b *url.URL) (path, rawpath string) {
 }
 
 func newProxy(target *url.URL) *httputil.ReverseProxy {
-
 	proxy := httputil.NewSingleHostReverseProxy(target)
 	proxy.Director = func(req *http.Request) {
 		targetQuery := target.RawQuery

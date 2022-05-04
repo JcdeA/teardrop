@@ -10,6 +10,7 @@ import (
 
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
+	"github.com/fosshostorg/teardrop/ent/deployment"
 	"github.com/fosshostorg/teardrop/ent/project"
 	"github.com/fosshostorg/teardrop/ent/user"
 )
@@ -30,12 +31,6 @@ func (pc *ProjectCreate) SetName(s string) *ProjectCreate {
 // SetGit sets the "git" field.
 func (pc *ProjectCreate) SetGit(s string) *ProjectCreate {
 	pc.mutation.SetGit(s)
-	return pc
-}
-
-// SetUserID sets the "user_id" field.
-func (pc *ProjectCreate) SetUserID(i int) *ProjectCreate {
-	pc.mutation.SetUserID(i)
 	return pc
 }
 
@@ -73,15 +68,34 @@ func (pc *ProjectCreate) SetNillableUpdateAt(t *time.Time) *ProjectCreate {
 	return pc
 }
 
-// SetUsersID sets the "users" edge to the User entity by ID.
-func (pc *ProjectCreate) SetUsersID(id int) *ProjectCreate {
-	pc.mutation.SetUsersID(id)
+// AddUserIDs adds the "users" edge to the User entity by IDs.
+func (pc *ProjectCreate) AddUserIDs(ids ...int) *ProjectCreate {
+	pc.mutation.AddUserIDs(ids...)
 	return pc
 }
 
-// SetUsers sets the "users" edge to the User entity.
-func (pc *ProjectCreate) SetUsers(u *User) *ProjectCreate {
-	return pc.SetUsersID(u.ID)
+// AddUsers adds the "users" edges to the User entity.
+func (pc *ProjectCreate) AddUsers(u ...*User) *ProjectCreate {
+	ids := make([]int, len(u))
+	for i := range u {
+		ids[i] = u[i].ID
+	}
+	return pc.AddUserIDs(ids...)
+}
+
+// AddDeploymentIDs adds the "deployments" edge to the Deployment entity by IDs.
+func (pc *ProjectCreate) AddDeploymentIDs(ids ...string) *ProjectCreate {
+	pc.mutation.AddDeploymentIDs(ids...)
+	return pc
+}
+
+// AddDeployments adds the "deployments" edges to the Deployment entity.
+func (pc *ProjectCreate) AddDeployments(d ...*Deployment) *ProjectCreate {
+	ids := make([]string, len(d))
+	for i := range d {
+		ids[i] = d[i].ID
+	}
+	return pc.AddDeploymentIDs(ids...)
 }
 
 // Mutation returns the ProjectMutation object of the builder.
@@ -173,9 +187,6 @@ func (pc *ProjectCreate) check() error {
 	if _, ok := pc.mutation.Git(); !ok {
 		return &ValidationError{Name: "git", err: errors.New(`ent: missing required field "Project.git"`)}
 	}
-	if _, ok := pc.mutation.UserID(); !ok {
-		return &ValidationError{Name: "user_id", err: errors.New(`ent: missing required field "Project.user_id"`)}
-	}
 	if _, ok := pc.mutation.DefaultBranch(); !ok {
 		return &ValidationError{Name: "default_branch", err: errors.New(`ent: missing required field "Project.default_branch"`)}
 	}
@@ -184,9 +195,6 @@ func (pc *ProjectCreate) check() error {
 	}
 	if _, ok := pc.mutation.UpdateAt(); !ok {
 		return &ValidationError{Name: "update_at", err: errors.New(`ent: missing required field "Project.update_at"`)}
-	}
-	if _, ok := pc.mutation.UsersID(); !ok {
-		return &ValidationError{Name: "users", err: errors.New(`ent: missing required edge "Project.users"`)}
 	}
 	return nil
 }
@@ -257,10 +265,10 @@ func (pc *ProjectCreate) createSpec() (*Project, *sqlgraph.CreateSpec) {
 	}
 	if nodes := pc.mutation.UsersIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.M2O,
-			Inverse: true,
+			Rel:     sqlgraph.M2M,
+			Inverse: false,
 			Table:   project.UsersTable,
-			Columns: []string{project.UsersColumn},
+			Columns: project.UsersPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
@@ -272,7 +280,25 @@ func (pc *ProjectCreate) createSpec() (*Project, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
-		_node.UserID = nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := pc.mutation.DeploymentsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   project.DeploymentsTable,
+			Columns: []string{project.DeploymentsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeString,
+					Column: deployment.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec

@@ -232,10 +232,10 @@ func (uc *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 	}
 	if nodes := uc.mutation.ProjectsIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
+			Rel:     sqlgraph.M2M,
+			Inverse: true,
 			Table:   user.ProjectsTable,
-			Columns: []string{user.ProjectsColumn},
+			Columns: user.ProjectsPrimaryKey,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{

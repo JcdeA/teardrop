@@ -5,13 +5,18 @@ import (
 	"time"
 
 	"github.com/fosshostorg/teardrop/api/routes/deployments"
+	"github.com/fosshostorg/teardrop/api/routes/domains"
 	"github.com/fosshostorg/teardrop/api/routes/webhook"
+	"github.com/fosshostorg/teardrop/ent"
+	"github.com/gorilla/csrf"
 
 	"github.com/fosshostorg/teardrop/api/routes/auth"
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo/v4"
 	"github.com/palantir/go-githubapp/githubapp"
 )
+
+var DB *ent.Client
 
 func StartAPI() {
 	godotenv.Load()
@@ -27,8 +32,11 @@ func StartAPI() {
 	}
 	registerRoutes(e, ghconfig.Github)
 
-	log.Fatal(e.Start("0.0.0.0:3000"))
+	e.Use(echo.WrapMiddleware(
+		csrf.Protect([]byte("8hmirhx6f9uuaqb5ym6tf9283ea2ibu6")),
+	))
 
+	log.Fatal(e.Start("0.0.0.0:3000"))
 }
 
 func registerRoutes(e *echo.Echo, c githubapp.Config) {
@@ -42,6 +50,8 @@ func registerRoutes(e *echo.Echo, c githubapp.Config) {
 	}
 	APIGroup := e.Group("/api")
 	APIGroup.GET("/deployments", deployments.Get)
+
+	APIGroup.GET("/domains", domains.Get)
 
 	APIGroup.Any("/auth/github", auth.GithubOAuthHandler(c))
 

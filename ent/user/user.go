@@ -23,13 +23,11 @@ const (
 	EdgeProjects = "projects"
 	// Table holds the table name of the user in the database.
 	Table = "users"
-	// ProjectsTable is the table that holds the projects relation/edge.
-	ProjectsTable = "projects"
+	// ProjectsTable is the table that holds the projects relation/edge. The primary key declared below.
+	ProjectsTable = "project_users"
 	// ProjectsInverseTable is the table name for the Project entity.
 	// It exists in this package in order to avoid circular dependency with the "project" package.
 	ProjectsInverseTable = "projects"
-	// ProjectsColumn is the table column denoting the projects relation/edge.
-	ProjectsColumn = "user_id"
 )
 
 // Columns holds all SQL columns for user fields.
@@ -40,6 +38,12 @@ var Columns = []string{
 	FieldCreateAt,
 	FieldUpdateAt,
 }
+
+var (
+	// ProjectsPrimaryKey and ProjectsColumn2 are the table columns denoting the
+	// primary key for the projects relation (M2M).
+	ProjectsPrimaryKey = []string{"project_id", "user_id"}
+)
 
 // ValidColumn reports if the column name is valid (part of the table columns).
 func ValidColumn(column string) bool {

@@ -9,6 +9,8 @@ import (
 
 	"github.com/fosshostorg/teardrop/ent/migrate"
 
+	"github.com/fosshostorg/teardrop/ent/deployment"
+	"github.com/fosshostorg/teardrop/ent/domain"
 	"github.com/fosshostorg/teardrop/ent/project"
 	"github.com/fosshostorg/teardrop/ent/user"
 
@@ -22,6 +24,10 @@ type Client struct {
 	config
 	// Schema is the client for creating, migrating and dropping schema.
 	Schema *migrate.Schema
+	// Deployment is the client for interacting with the Deployment builders.
+	Deployment *DeploymentClient
+	// Domain is the client for interacting with the Domain builders.
+	Domain *DomainClient
 	// Project is the client for interacting with the Project builders.
 	Project *ProjectClient
 	// User is the client for interacting with the User builders.
@@ -39,6 +45,8 @@ func NewClient(opts ...Option) *Client {
 
 func (c *Client) init() {
 	c.Schema = migrate.NewSchema(c.driver)
+	c.Deployment = NewDeploymentClient(c.config)
+	c.Domain = NewDomainClient(c.config)
 	c.Project = NewProjectClient(c.config)
 	c.User = NewUserClient(c.config)
 }
@@ -72,10 +80,12 @@ func (c *Client) Tx(ctx context.Context) (*Tx, error) {
 	cfg := c.config
 	cfg.driver = tx
 	return &Tx{
-		ctx:     ctx,
-		config:  cfg,
-		Project: NewProjectClient(cfg),
-		User:    NewUserClient(cfg),
+		ctx:        ctx,
+		config:     cfg,
+		Deployment: NewDeploymentClient(cfg),
+		Domain:     NewDomainClient(cfg),
+		Project:    NewProjectClient(cfg),
+		User:       NewUserClient(cfg),
 	}, nil
 }
 
@@ -93,17 +103,19 @@ func (c *Client) BeginTx(ctx context.Context, opts *sql.TxOptions) (*Tx, error) 
 	cfg := c.config
 	cfg.driver = &txDriver{tx: tx, drv: c.driver}
 	return &Tx{
-		ctx:     ctx,
-		config:  cfg,
-		Project: NewProjectClient(cfg),
-		User:    NewUserClient(cfg),
+		ctx:        ctx,
+		config:     cfg,
+		Deployment: NewDeploymentClient(cfg),
+		Domain:     NewDomainClient(cfg),
+		Project:    NewProjectClient(cfg),
+		User:       NewUserClient(cfg),
 	}, nil
 }
 
 // Debug returns a new debug-client. It's used to get verbose logging on specific operations.
 //
 //	client.Debug().
-//		Project.
+//		Deployment.
 //		Query().
 //		Count(ctx)
 //
@@ -126,8 +138,238 @@ func (c *Client) Close() error {
 // Use adds the mutation hooks to all the entity clients.
 // In order to add hooks to a specific client, call: `client.Node.Use(...)`.
 func (c *Client) Use(hooks ...Hook) {
+	c.Deployment.Use(hooks...)
+	c.Domain.Use(hooks...)
 	c.Project.Use(hooks...)
 	c.User.Use(hooks...)
+}
+
+// DeploymentClient is a client for the Deployment schema.
+type DeploymentClient struct {
+	config
+}
+
+// NewDeploymentClient returns a client for the Deployment from the given config.
+func NewDeploymentClient(c config) *DeploymentClient {
+	return &DeploymentClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `deployment.Hooks(f(g(h())))`.
+func (c *DeploymentClient) Use(hooks ...Hook) {
+	c.hooks.Deployment = append(c.hooks.Deployment, hooks...)
+}
+
+// Create returns a create builder for Deployment.
+func (c *DeploymentClient) Create() *DeploymentCreate {
+	mutation := newDeploymentMutation(c.config, OpCreate)
+	return &DeploymentCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of Deployment entities.
+func (c *DeploymentClient) CreateBulk(builders ...*DeploymentCreate) *DeploymentCreateBulk {
+	return &DeploymentCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for Deployment.
+func (c *DeploymentClient) Update() *DeploymentUpdate {
+	mutation := newDeploymentMutation(c.config, OpUpdate)
+	return &DeploymentUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *DeploymentClient) UpdateOne(d *Deployment) *DeploymentUpdateOne {
+	mutation := newDeploymentMutation(c.config, OpUpdateOne, withDeployment(d))
+	return &DeploymentUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *DeploymentClient) UpdateOneID(id string) *DeploymentUpdateOne {
+	mutation := newDeploymentMutation(c.config, OpUpdateOne, withDeploymentID(id))
+	return &DeploymentUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for Deployment.
+func (c *DeploymentClient) Delete() *DeploymentDelete {
+	mutation := newDeploymentMutation(c.config, OpDelete)
+	return &DeploymentDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a delete builder for the given entity.
+func (c *DeploymentClient) DeleteOne(d *Deployment) *DeploymentDeleteOne {
+	return c.DeleteOneID(d.ID)
+}
+
+// DeleteOneID returns a delete builder for the given id.
+func (c *DeploymentClient) DeleteOneID(id string) *DeploymentDeleteOne {
+	builder := c.Delete().Where(deployment.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &DeploymentDeleteOne{builder}
+}
+
+// Query returns a query builder for Deployment.
+func (c *DeploymentClient) Query() *DeploymentQuery {
+	return &DeploymentQuery{
+		config: c.config,
+	}
+}
+
+// Get returns a Deployment entity by its id.
+func (c *DeploymentClient) Get(ctx context.Context, id string) (*Deployment, error) {
+	return c.Query().Where(deployment.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *DeploymentClient) GetX(ctx context.Context, id string) *Deployment {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryProjects queries the projects edge of a Deployment.
+func (c *DeploymentClient) QueryProjects(d *Deployment) *ProjectQuery {
+	query := &ProjectQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := d.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(deployment.Table, deployment.FieldID, id),
+			sqlgraph.To(project.Table, project.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, deployment.ProjectsTable, deployment.ProjectsColumn),
+		)
+		fromV = sqlgraph.Neighbors(d.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryDomains queries the domains edge of a Deployment.
+func (c *DeploymentClient) QueryDomains(d *Deployment) *DomainQuery {
+	query := &DomainQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := d.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(deployment.Table, deployment.FieldID, id),
+			sqlgraph.To(domain.Table, domain.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, deployment.DomainsTable, deployment.DomainsColumn),
+		)
+		fromV = sqlgraph.Neighbors(d.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *DeploymentClient) Hooks() []Hook {
+	return c.hooks.Deployment
+}
+
+// DomainClient is a client for the Domain schema.
+type DomainClient struct {
+	config
+}
+
+// NewDomainClient returns a client for the Domain from the given config.
+func NewDomainClient(c config) *DomainClient {
+	return &DomainClient{config: c}
+}
+
+// Use adds a list of mutation hooks to the hooks stack.
+// A call to `Use(f, g, h)` equals to `domain.Hooks(f(g(h())))`.
+func (c *DomainClient) Use(hooks ...Hook) {
+	c.hooks.Domain = append(c.hooks.Domain, hooks...)
+}
+
+// Create returns a create builder for Domain.
+func (c *DomainClient) Create() *DomainCreate {
+	mutation := newDomainMutation(c.config, OpCreate)
+	return &DomainCreate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// CreateBulk returns a builder for creating a bulk of Domain entities.
+func (c *DomainClient) CreateBulk(builders ...*DomainCreate) *DomainCreateBulk {
+	return &DomainCreateBulk{config: c.config, builders: builders}
+}
+
+// Update returns an update builder for Domain.
+func (c *DomainClient) Update() *DomainUpdate {
+	mutation := newDomainMutation(c.config, OpUpdate)
+	return &DomainUpdate{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOne returns an update builder for the given entity.
+func (c *DomainClient) UpdateOne(d *Domain) *DomainUpdateOne {
+	mutation := newDomainMutation(c.config, OpUpdateOne, withDomain(d))
+	return &DomainUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// UpdateOneID returns an update builder for the given id.
+func (c *DomainClient) UpdateOneID(id int) *DomainUpdateOne {
+	mutation := newDomainMutation(c.config, OpUpdateOne, withDomainID(id))
+	return &DomainUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// Delete returns a delete builder for Domain.
+func (c *DomainClient) Delete() *DomainDelete {
+	mutation := newDomainMutation(c.config, OpDelete)
+	return &DomainDelete{config: c.config, hooks: c.Hooks(), mutation: mutation}
+}
+
+// DeleteOne returns a delete builder for the given entity.
+func (c *DomainClient) DeleteOne(d *Domain) *DomainDeleteOne {
+	return c.DeleteOneID(d.ID)
+}
+
+// DeleteOneID returns a delete builder for the given id.
+func (c *DomainClient) DeleteOneID(id int) *DomainDeleteOne {
+	builder := c.Delete().Where(domain.ID(id))
+	builder.mutation.id = &id
+	builder.mutation.op = OpDeleteOne
+	return &DomainDeleteOne{builder}
+}
+
+// Query returns a query builder for Domain.
+func (c *DomainClient) Query() *DomainQuery {
+	return &DomainQuery{
+		config: c.config,
+	}
+}
+
+// Get returns a Domain entity by its id.
+func (c *DomainClient) Get(ctx context.Context, id int) (*Domain, error) {
+	return c.Query().Where(domain.ID(id)).Only(ctx)
+}
+
+// GetX is like Get, but panics if an error occurs.
+func (c *DomainClient) GetX(ctx context.Context, id int) *Domain {
+	obj, err := c.Get(ctx, id)
+	if err != nil {
+		panic(err)
+	}
+	return obj
+}
+
+// QueryDeployment queries the deployment edge of a Domain.
+func (c *DomainClient) QueryDeployment(d *Domain) *DeploymentQuery {
+	query := &DeploymentQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := d.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(domain.Table, domain.FieldID, id),
+			sqlgraph.To(deployment.Table, deployment.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, domain.DeploymentTable, domain.DeploymentColumn),
+		)
+		fromV = sqlgraph.Neighbors(d.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// Hooks returns the client hooks.
+func (c *DomainClient) Hooks() []Hook {
+	return c.hooks.Domain
 }
 
 // ProjectClient is a client for the Project schema.
@@ -223,7 +465,23 @@ func (c *ProjectClient) QueryUsers(pr *Project) *UserQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(project.Table, project.FieldID, id),
 			sqlgraph.To(user.Table, user.FieldID),
-			sqlgraph.Edge(sqlgraph.M2O, true, project.UsersTable, project.UsersColumn),
+			sqlgraph.Edge(sqlgraph.M2M, false, project.UsersTable, project.UsersPrimaryKey...),
+		)
+		fromV = sqlgraph.Neighbors(pr.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryDeployments queries the deployments edge of a Project.
+func (c *ProjectClient) QueryDeployments(pr *Project) *DeploymentQuery {
+	query := &DeploymentQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := pr.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(project.Table, project.FieldID, id),
+			sqlgraph.To(deployment.Table, deployment.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, project.DeploymentsTable, project.DeploymentsColumn),
 		)
 		fromV = sqlgraph.Neighbors(pr.driver.Dialect(), step)
 		return fromV, nil
@@ -329,7 +587,7 @@ func (c *UserClient) QueryProjects(u *User) *ProjectQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(user.Table, user.FieldID, id),
 			sqlgraph.To(project.Table, project.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, user.ProjectsTable, user.ProjectsColumn),
+			sqlgraph.Edge(sqlgraph.M2M, true, user.ProjectsTable, user.ProjectsPrimaryKey...),
 		)
 		fromV = sqlgraph.Neighbors(u.driver.Dialect(), step)
 		return fromV, nil
