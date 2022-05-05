@@ -23,6 +23,7 @@ require (
 	ariga.io/atlas v0.3.7-0.20220303204946-787354f533c3 // indirect
 	entgo.io/ent v0.10.1 // indirect
 	github.com/agext/levenshtein v1.2.1 // indirect
+	github.com/alexedwards/scs/v2 v2.5.0 // indirect
 	github.com/apparentlymart/go-textseg/v13 v13.0.0 // indirect
 	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/creack/pty v1.1.18 // indirect
@@ -33,9 +34,12 @@ require (
 	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/google/go-cmp v0.5.6 // indirect
 	github.com/google/uuid v1.3.0 // indirect
+	github.com/gorilla/context v1.1.1 // indirect
 	github.com/gorilla/csrf v1.7.1 // indirect
 	github.com/gorilla/securecookie v1.1.1 // indirect
+	github.com/gorilla/sessions v1.2.1 // indirect
 	github.com/hashicorp/hcl/v2 v2.10.0 // indirect
+	github.com/labstack/echo-contrib v0.12.0 // indirect
 	github.com/mattn/go-runewidth v0.0.9 // indirect
 	github.com/mitchellh/go-wordwrap v0.0.0-20150314170334-ad45545899c7 // indirect
 	github.com/olekukonko/tablewriter v0.0.5 // indirect
