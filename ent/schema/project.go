@@ -6,6 +6,7 @@ import (
 	"entgo.io/ent"
 	"entgo.io/ent/schema/edge"
 	"entgo.io/ent/schema/field"
+	"github.com/google/uuid"
 )
 
 // Project holds the schema definition for the Project entity.
@@ -16,6 +17,8 @@ type Project struct {
 // Fields of the Project.
 func (Project) Fields() []ent.Field {
 	return []ent.Field{
+		field.UUID("id", uuid.UUID{}).
+			Default(uuid.New),
 		field.String("name"),
 		field.String("git"),
 		field.String("default_branch"),
@@ -29,5 +32,6 @@ func (Project) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.To("users", User.Type),
 		edge.To("deployments", Deployment.Type),
+		edge.To("domains", Domain.Type),
 	}
 }

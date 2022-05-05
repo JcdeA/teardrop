@@ -4,6 +4,8 @@ package deployment
 
 import (
 	"time"
+
+	"github.com/google/uuid"
 )
 
 const (
@@ -17,19 +19,19 @@ const (
 	FieldAddress = "address"
 	// FieldCreateAt holds the string denoting the create_at field in the database.
 	FieldCreateAt = "create_at"
-	// EdgeProjects holds the string denoting the projects edge name in mutations.
-	EdgeProjects = "projects"
+	// EdgeProject holds the string denoting the project edge name in mutations.
+	EdgeProject = "project"
 	// EdgeDomains holds the string denoting the domains edge name in mutations.
 	EdgeDomains = "domains"
 	// Table holds the table name of the deployment in the database.
 	Table = "deployments"
-	// ProjectsTable is the table that holds the projects relation/edge.
-	ProjectsTable = "projects"
-	// ProjectsInverseTable is the table name for the Project entity.
+	// ProjectTable is the table that holds the project relation/edge.
+	ProjectTable = "deployments"
+	// ProjectInverseTable is the table name for the Project entity.
 	// It exists in this package in order to avoid circular dependency with the "project" package.
-	ProjectsInverseTable = "projects"
-	// ProjectsColumn is the table column denoting the projects relation/edge.
-	ProjectsColumn = "deployment_projects"
+	ProjectInverseTable = "projects"
+	// ProjectColumn is the table column denoting the project relation/edge.
+	ProjectColumn = "project_deployments"
 	// DomainsTable is the table that holds the domains relation/edge.
 	DomainsTable = "domains"
 	// DomainsInverseTable is the table name for the Domain entity.
@@ -71,4 +73,6 @@ func ValidColumn(column string) bool {
 var (
 	// DefaultCreateAt holds the default value on creation for the "create_at" field.
 	DefaultCreateAt func() time.Time
+	// DefaultID holds the default value on creation for the "id" field.
+	DefaultID func() uuid.UUID
 )

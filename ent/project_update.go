@@ -12,9 +12,11 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/fosshostorg/teardrop/ent/deployment"
+	"github.com/fosshostorg/teardrop/ent/domain"
 	"github.com/fosshostorg/teardrop/ent/predicate"
 	"github.com/fosshostorg/teardrop/ent/project"
 	"github.com/fosshostorg/teardrop/ent/user"
+	"github.com/google/uuid"
 )
 
 // ProjectUpdate is the builder for updating Project entities.
@@ -69,14 +71,14 @@ func (pu *ProjectUpdate) SetUpdateAt(t time.Time) *ProjectUpdate {
 }
 
 // AddUserIDs adds the "users" edge to the User entity by IDs.
-func (pu *ProjectUpdate) AddUserIDs(ids ...int) *ProjectUpdate {
+func (pu *ProjectUpdate) AddUserIDs(ids ...uuid.UUID) *ProjectUpdate {
 	pu.mutation.AddUserIDs(ids...)
 	return pu
 }
 
 // AddUsers adds the "users" edges to the User entity.
 func (pu *ProjectUpdate) AddUsers(u ...*User) *ProjectUpdate {
-	ids := make([]int, len(u))
+	ids := make([]uuid.UUID, len(u))
 	for i := range u {
 		ids[i] = u[i].ID
 	}
@@ -84,18 +86,33 @@ func (pu *ProjectUpdate) AddUsers(u ...*User) *ProjectUpdate {
 }
 
 // AddDeploymentIDs adds the "deployments" edge to the Deployment entity by IDs.
-func (pu *ProjectUpdate) AddDeploymentIDs(ids ...string) *ProjectUpdate {
+func (pu *ProjectUpdate) AddDeploymentIDs(ids ...uuid.UUID) *ProjectUpdate {
 	pu.mutation.AddDeploymentIDs(ids...)
 	return pu
 }
 
 // AddDeployments adds the "deployments" edges to the Deployment entity.
 func (pu *ProjectUpdate) AddDeployments(d ...*Deployment) *ProjectUpdate {
-	ids := make([]string, len(d))
+	ids := make([]uuid.UUID, len(d))
 	for i := range d {
 		ids[i] = d[i].ID
 	}
 	return pu.AddDeploymentIDs(ids...)
+}
+
+// AddDomainIDs adds the "domains" edge to the Domain entity by IDs.
+func (pu *ProjectUpdate) AddDomainIDs(ids ...uuid.UUID) *ProjectUpdate {
+	pu.mutation.AddDomainIDs(ids...)
+	return pu
+}
+
+// AddDomains adds the "domains" edges to the Domain entity.
+func (pu *ProjectUpdate) AddDomains(d ...*Domain) *ProjectUpdate {
+	ids := make([]uuid.UUID, len(d))
+	for i := range d {
+		ids[i] = d[i].ID
+	}
+	return pu.AddDomainIDs(ids...)
 }
 
 // Mutation returns the ProjectMutation object of the builder.
@@ -110,14 +127,14 @@ func (pu *ProjectUpdate) ClearUsers() *ProjectUpdate {
 }
 
 // RemoveUserIDs removes the "users" edge to User entities by IDs.
-func (pu *ProjectUpdate) RemoveUserIDs(ids ...int) *ProjectUpdate {
+func (pu *ProjectUpdate) RemoveUserIDs(ids ...uuid.UUID) *ProjectUpdate {
 	pu.mutation.RemoveUserIDs(ids...)
 	return pu
 }
 
 // RemoveUsers removes "users" edges to User entities.
 func (pu *ProjectUpdate) RemoveUsers(u ...*User) *ProjectUpdate {
-	ids := make([]int, len(u))
+	ids := make([]uuid.UUID, len(u))
 	for i := range u {
 		ids[i] = u[i].ID
 	}
@@ -131,18 +148,39 @@ func (pu *ProjectUpdate) ClearDeployments() *ProjectUpdate {
 }
 
 // RemoveDeploymentIDs removes the "deployments" edge to Deployment entities by IDs.
-func (pu *ProjectUpdate) RemoveDeploymentIDs(ids ...string) *ProjectUpdate {
+func (pu *ProjectUpdate) RemoveDeploymentIDs(ids ...uuid.UUID) *ProjectUpdate {
 	pu.mutation.RemoveDeploymentIDs(ids...)
 	return pu
 }
 
 // RemoveDeployments removes "deployments" edges to Deployment entities.
 func (pu *ProjectUpdate) RemoveDeployments(d ...*Deployment) *ProjectUpdate {
-	ids := make([]string, len(d))
+	ids := make([]uuid.UUID, len(d))
 	for i := range d {
 		ids[i] = d[i].ID
 	}
 	return pu.RemoveDeploymentIDs(ids...)
+}
+
+// ClearDomains clears all "domains" edges to the Domain entity.
+func (pu *ProjectUpdate) ClearDomains() *ProjectUpdate {
+	pu.mutation.ClearDomains()
+	return pu
+}
+
+// RemoveDomainIDs removes the "domains" edge to Domain entities by IDs.
+func (pu *ProjectUpdate) RemoveDomainIDs(ids ...uuid.UUID) *ProjectUpdate {
+	pu.mutation.RemoveDomainIDs(ids...)
+	return pu
+}
+
+// RemoveDomains removes "domains" edges to Domain entities.
+func (pu *ProjectUpdate) RemoveDomains(d ...*Domain) *ProjectUpdate {
+	ids := make([]uuid.UUID, len(d))
+	for i := range d {
+		ids[i] = d[i].ID
+	}
+	return pu.RemoveDomainIDs(ids...)
 }
 
 // Save executes the query and returns the number of nodes affected by the update operation.
@@ -214,7 +252,7 @@ func (pu *ProjectUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Table:   project.Table,
 			Columns: project.Columns,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
+				Type:   field.TypeUUID,
 				Column: project.FieldID,
 			},
 		},
@@ -270,7 +308,7 @@ func (pu *ProjectUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
+					Type:   field.TypeUUID,
 					Column: user.FieldID,
 				},
 			},
@@ -286,7 +324,7 @@ func (pu *ProjectUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
+					Type:   field.TypeUUID,
 					Column: user.FieldID,
 				},
 			},
@@ -305,7 +343,7 @@ func (pu *ProjectUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
+					Type:   field.TypeUUID,
 					Column: user.FieldID,
 				},
 			},
@@ -324,7 +362,7 @@ func (pu *ProjectUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeString,
+					Type:   field.TypeUUID,
 					Column: deployment.FieldID,
 				},
 			},
@@ -340,7 +378,7 @@ func (pu *ProjectUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeString,
+					Type:   field.TypeUUID,
 					Column: deployment.FieldID,
 				},
 			},
@@ -359,8 +397,62 @@ func (pu *ProjectUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeString,
+					Type:   field.TypeUUID,
 					Column: deployment.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if pu.mutation.DomainsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   project.DomainsTable,
+			Columns: []string{project.DomainsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: domain.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := pu.mutation.RemovedDomainsIDs(); len(nodes) > 0 && !pu.mutation.DomainsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   project.DomainsTable,
+			Columns: []string{project.DomainsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: domain.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := pu.mutation.DomainsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   project.DomainsTable,
+			Columns: []string{project.DomainsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: domain.FieldID,
 				},
 			},
 		}
@@ -427,14 +519,14 @@ func (puo *ProjectUpdateOne) SetUpdateAt(t time.Time) *ProjectUpdateOne {
 }
 
 // AddUserIDs adds the "users" edge to the User entity by IDs.
-func (puo *ProjectUpdateOne) AddUserIDs(ids ...int) *ProjectUpdateOne {
+func (puo *ProjectUpdateOne) AddUserIDs(ids ...uuid.UUID) *ProjectUpdateOne {
 	puo.mutation.AddUserIDs(ids...)
 	return puo
 }
 
 // AddUsers adds the "users" edges to the User entity.
 func (puo *ProjectUpdateOne) AddUsers(u ...*User) *ProjectUpdateOne {
-	ids := make([]int, len(u))
+	ids := make([]uuid.UUID, len(u))
 	for i := range u {
 		ids[i] = u[i].ID
 	}
@@ -442,18 +534,33 @@ func (puo *ProjectUpdateOne) AddUsers(u ...*User) *ProjectUpdateOne {
 }
 
 // AddDeploymentIDs adds the "deployments" edge to the Deployment entity by IDs.
-func (puo *ProjectUpdateOne) AddDeploymentIDs(ids ...string) *ProjectUpdateOne {
+func (puo *ProjectUpdateOne) AddDeploymentIDs(ids ...uuid.UUID) *ProjectUpdateOne {
 	puo.mutation.AddDeploymentIDs(ids...)
 	return puo
 }
 
 // AddDeployments adds the "deployments" edges to the Deployment entity.
 func (puo *ProjectUpdateOne) AddDeployments(d ...*Deployment) *ProjectUpdateOne {
-	ids := make([]string, len(d))
+	ids := make([]uuid.UUID, len(d))
 	for i := range d {
 		ids[i] = d[i].ID
 	}
 	return puo.AddDeploymentIDs(ids...)
+}
+
+// AddDomainIDs adds the "domains" edge to the Domain entity by IDs.
+func (puo *ProjectUpdateOne) AddDomainIDs(ids ...uuid.UUID) *ProjectUpdateOne {
+	puo.mutation.AddDomainIDs(ids...)
+	return puo
+}
+
+// AddDomains adds the "domains" edges to the Domain entity.
+func (puo *ProjectUpdateOne) AddDomains(d ...*Domain) *ProjectUpdateOne {
+	ids := make([]uuid.UUID, len(d))
+	for i := range d {
+		ids[i] = d[i].ID
+	}
+	return puo.AddDomainIDs(ids...)
 }
 
 // Mutation returns the ProjectMutation object of the builder.
@@ -468,14 +575,14 @@ func (puo *ProjectUpdateOne) ClearUsers() *ProjectUpdateOne {
 }
 
 // RemoveUserIDs removes the "users" edge to User entities by IDs.
-func (puo *ProjectUpdateOne) RemoveUserIDs(ids ...int) *ProjectUpdateOne {
+func (puo *ProjectUpdateOne) RemoveUserIDs(ids ...uuid.UUID) *ProjectUpdateOne {
 	puo.mutation.RemoveUserIDs(ids...)
 	return puo
 }
 
 // RemoveUsers removes "users" edges to User entities.
 func (puo *ProjectUpdateOne) RemoveUsers(u ...*User) *ProjectUpdateOne {
-	ids := make([]int, len(u))
+	ids := make([]uuid.UUID, len(u))
 	for i := range u {
 		ids[i] = u[i].ID
 	}
@@ -489,18 +596,39 @@ func (puo *ProjectUpdateOne) ClearDeployments() *ProjectUpdateOne {
 }
 
 // RemoveDeploymentIDs removes the "deployments" edge to Deployment entities by IDs.
-func (puo *ProjectUpdateOne) RemoveDeploymentIDs(ids ...string) *ProjectUpdateOne {
+func (puo *ProjectUpdateOne) RemoveDeploymentIDs(ids ...uuid.UUID) *ProjectUpdateOne {
 	puo.mutation.RemoveDeploymentIDs(ids...)
 	return puo
 }
 
 // RemoveDeployments removes "deployments" edges to Deployment entities.
 func (puo *ProjectUpdateOne) RemoveDeployments(d ...*Deployment) *ProjectUpdateOne {
-	ids := make([]string, len(d))
+	ids := make([]uuid.UUID, len(d))
 	for i := range d {
 		ids[i] = d[i].ID
 	}
 	return puo.RemoveDeploymentIDs(ids...)
+}
+
+// ClearDomains clears all "domains" edges to the Domain entity.
+func (puo *ProjectUpdateOne) ClearDomains() *ProjectUpdateOne {
+	puo.mutation.ClearDomains()
+	return puo
+}
+
+// RemoveDomainIDs removes the "domains" edge to Domain entities by IDs.
+func (puo *ProjectUpdateOne) RemoveDomainIDs(ids ...uuid.UUID) *ProjectUpdateOne {
+	puo.mutation.RemoveDomainIDs(ids...)
+	return puo
+}
+
+// RemoveDomains removes "domains" edges to Domain entities.
+func (puo *ProjectUpdateOne) RemoveDomains(d ...*Domain) *ProjectUpdateOne {
+	ids := make([]uuid.UUID, len(d))
+	for i := range d {
+		ids[i] = d[i].ID
+	}
+	return puo.RemoveDomainIDs(ids...)
 }
 
 // Select allows selecting one or more fields (columns) of the returned entity.
@@ -579,7 +707,7 @@ func (puo *ProjectUpdateOne) sqlSave(ctx context.Context) (_node *Project, err e
 			Table:   project.Table,
 			Columns: project.Columns,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
+				Type:   field.TypeUUID,
 				Column: project.FieldID,
 			},
 		},
@@ -652,7 +780,7 @@ func (puo *ProjectUpdateOne) sqlSave(ctx context.Context) (_node *Project, err e
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
+					Type:   field.TypeUUID,
 					Column: user.FieldID,
 				},
 			},
@@ -668,7 +796,7 @@ func (puo *ProjectUpdateOne) sqlSave(ctx context.Context) (_node *Project, err e
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
+					Type:   field.TypeUUID,
 					Column: user.FieldID,
 				},
 			},
@@ -687,7 +815,7 @@ func (puo *ProjectUpdateOne) sqlSave(ctx context.Context) (_node *Project, err e
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
+					Type:   field.TypeUUID,
 					Column: user.FieldID,
 				},
 			},
@@ -706,7 +834,7 @@ func (puo *ProjectUpdateOne) sqlSave(ctx context.Context) (_node *Project, err e
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeString,
+					Type:   field.TypeUUID,
 					Column: deployment.FieldID,
 				},
 			},
@@ -722,7 +850,7 @@ func (puo *ProjectUpdateOne) sqlSave(ctx context.Context) (_node *Project, err e
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeString,
+					Type:   field.TypeUUID,
 					Column: deployment.FieldID,
 				},
 			},
@@ -741,8 +869,62 @@ func (puo *ProjectUpdateOne) sqlSave(ctx context.Context) (_node *Project, err e
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeString,
+					Type:   field.TypeUUID,
 					Column: deployment.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Add = append(_spec.Edges.Add, edge)
+	}
+	if puo.mutation.DomainsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   project.DomainsTable,
+			Columns: []string{project.DomainsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: domain.FieldID,
+				},
+			},
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := puo.mutation.RemovedDomainsIDs(); len(nodes) > 0 && !puo.mutation.DomainsCleared() {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   project.DomainsTable,
+			Columns: []string{project.DomainsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: domain.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
+	}
+	if nodes := puo.mutation.DomainsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   project.DomainsTable,
+			Columns: []string{project.DomainsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: domain.FieldID,
 				},
 			},
 		}

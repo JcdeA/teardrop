@@ -13,6 +13,7 @@ import (
 	"github.com/fosshostorg/teardrop/ent/deployment"
 	"github.com/fosshostorg/teardrop/ent/domain"
 	"github.com/fosshostorg/teardrop/ent/project"
+	"github.com/google/uuid"
 )
 
 // DeploymentCreate is the builder for creating a Deployment entity.
@@ -49,35 +50,47 @@ func (dc *DeploymentCreate) SetNillableCreateAt(t *time.Time) *DeploymentCreate 
 }
 
 // SetID sets the "id" field.
-func (dc *DeploymentCreate) SetID(s string) *DeploymentCreate {
-	dc.mutation.SetID(s)
+func (dc *DeploymentCreate) SetID(u uuid.UUID) *DeploymentCreate {
+	dc.mutation.SetID(u)
 	return dc
 }
 
-// AddProjectIDs adds the "projects" edge to the Project entity by IDs.
-func (dc *DeploymentCreate) AddProjectIDs(ids ...int) *DeploymentCreate {
-	dc.mutation.AddProjectIDs(ids...)
-	return dc
-}
-
-// AddProjects adds the "projects" edges to the Project entity.
-func (dc *DeploymentCreate) AddProjects(p ...*Project) *DeploymentCreate {
-	ids := make([]int, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
+// SetNillableID sets the "id" field if the given value is not nil.
+func (dc *DeploymentCreate) SetNillableID(u *uuid.UUID) *DeploymentCreate {
+	if u != nil {
+		dc.SetID(*u)
 	}
-	return dc.AddProjectIDs(ids...)
+	return dc
+}
+
+// SetProjectID sets the "project" edge to the Project entity by ID.
+func (dc *DeploymentCreate) SetProjectID(id uuid.UUID) *DeploymentCreate {
+	dc.mutation.SetProjectID(id)
+	return dc
+}
+
+// SetNillableProjectID sets the "project" edge to the Project entity by ID if the given value is not nil.
+func (dc *DeploymentCreate) SetNillableProjectID(id *uuid.UUID) *DeploymentCreate {
+	if id != nil {
+		dc = dc.SetProjectID(*id)
+	}
+	return dc
+}
+
+// SetProject sets the "project" edge to the Project entity.
+func (dc *DeploymentCreate) SetProject(p *Project) *DeploymentCreate {
+	return dc.SetProjectID(p.ID)
 }
 
 // AddDomainIDs adds the "domains" edge to the Domain entity by IDs.
-func (dc *DeploymentCreate) AddDomainIDs(ids ...int) *DeploymentCreate {
+func (dc *DeploymentCreate) AddDomainIDs(ids ...uuid.UUID) *DeploymentCreate {
 	dc.mutation.AddDomainIDs(ids...)
 	return dc
 }
 
 // AddDomains adds the "domains" edges to the Domain entity.
 func (dc *DeploymentCreate) AddDomains(d ...*Domain) *DeploymentCreate {
-	ids := make([]int, len(d))
+	ids := make([]uuid.UUID, len(d))
 	for i := range d {
 		ids[i] = d[i].ID
 	}
@@ -159,6 +172,10 @@ func (dc *DeploymentCreate) defaults() {
 		v := deployment.DefaultCreateAt()
 		dc.mutation.SetCreateAt(v)
 	}
+	if _, ok := dc.mutation.ID(); !ok {
+		v := deployment.DefaultID()
+		dc.mutation.SetID(v)
+	}
 }
 
 // check runs all checks and user-defined validators on the builder.
@@ -184,10 +201,10 @@ func (dc *DeploymentCreate) sqlSave(ctx context.Context) (*Deployment, error) {
 		return nil, err
 	}
 	if _spec.ID.Value != nil {
-		if id, ok := _spec.ID.Value.(string); ok {
-			_node.ID = id
-		} else {
-			return nil, fmt.Errorf("unexpected Deployment.ID type: %T", _spec.ID.Value)
+		if id, ok := _spec.ID.Value.(*uuid.UUID); ok {
+			_node.ID = *id
+		} else if err := _node.ID.Scan(_spec.ID.Value); err != nil {
+			return nil, err
 		}
 	}
 	return _node, nil
@@ -199,14 +216,14 @@ func (dc *DeploymentCreate) createSpec() (*Deployment, *sqlgraph.CreateSpec) {
 		_spec = &sqlgraph.CreateSpec{
 			Table: deployment.Table,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeString,
+				Type:   field.TypeUUID,
 				Column: deployment.FieldID,
 			},
 		}
 	)
 	if id, ok := dc.mutation.ID(); ok {
 		_node.ID = id
-		_spec.ID.Value = id
+		_spec.ID.Value = &id
 	}
 	if value, ok := dc.mutation.Branch(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
@@ -232,16 +249,16 @@ func (dc *DeploymentCreate) createSpec() (*Deployment, *sqlgraph.CreateSpec) {
 		})
 		_node.CreateAt = value
 	}
-	if nodes := dc.mutation.ProjectsIDs(); len(nodes) > 0 {
+	if nodes := dc.mutation.ProjectIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   deployment.ProjectsTable,
-			Columns: []string{deployment.ProjectsColumn},
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   deployment.ProjectTable,
+			Columns: []string{deployment.ProjectColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
+					Type:   field.TypeUUID,
 					Column: project.FieldID,
 				},
 			},
@@ -249,6 +266,7 @@ func (dc *DeploymentCreate) createSpec() (*Deployment, *sqlgraph.CreateSpec) {
 		for _, k := range nodes {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
+		_node.project_deployments = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	if nodes := dc.mutation.DomainsIDs(); len(nodes) > 0 {
@@ -260,7 +278,7 @@ func (dc *DeploymentCreate) createSpec() (*Deployment, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
+					Type:   field.TypeUUID,
 					Column: domain.FieldID,
 				},
 			},

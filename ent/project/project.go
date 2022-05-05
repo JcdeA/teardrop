@@ -4,6 +4,8 @@ package project
 
 import (
 	"time"
+
+	"github.com/google/uuid"
 )
 
 const (
@@ -25,6 +27,8 @@ const (
 	EdgeUsers = "users"
 	// EdgeDeployments holds the string denoting the deployments edge name in mutations.
 	EdgeDeployments = "deployments"
+	// EdgeDomains holds the string denoting the domains edge name in mutations.
+	EdgeDomains = "domains"
 	// Table holds the table name of the project in the database.
 	Table = "projects"
 	// UsersTable is the table that holds the users relation/edge. The primary key declared below.
@@ -39,6 +43,13 @@ const (
 	DeploymentsInverseTable = "deployments"
 	// DeploymentsColumn is the table column denoting the deployments relation/edge.
 	DeploymentsColumn = "project_deployments"
+	// DomainsTable is the table that holds the domains relation/edge.
+	DomainsTable = "domains"
+	// DomainsInverseTable is the table name for the Domain entity.
+	// It exists in this package in order to avoid circular dependency with the "domain" package.
+	DomainsInverseTable = "domains"
+	// DomainsColumn is the table column denoting the domains relation/edge.
+	DomainsColumn = "project_domains"
 )
 
 // Columns holds all SQL columns for project fields.
@@ -49,12 +60,6 @@ var Columns = []string{
 	FieldDefaultBranch,
 	FieldCreateAt,
 	FieldUpdateAt,
-}
-
-// ForeignKeys holds the SQL foreign-keys that are owned by the "projects"
-// table and are not defined as standalone fields in the schema.
-var ForeignKeys = []string{
-	"deployment_projects",
 }
 
 var (
@@ -70,11 +75,6 @@ func ValidColumn(column string) bool {
 			return true
 		}
 	}
-	for i := range ForeignKeys {
-		if column == ForeignKeys[i] {
-			return true
-		}
-	}
 	return false
 }
 
@@ -85,4 +85,6 @@ var (
 	DefaultUpdateAt func() time.Time
 	// UpdateDefaultUpdateAt holds the default value on update for the "update_at" field.
 	UpdateDefaultUpdateAt func() time.Time
+	// DefaultID holds the default value on creation for the "id" field.
+	DefaultID func() uuid.UUID
 )

@@ -8,31 +8,32 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"github.com/fosshostorg/teardrop/ent/predicate"
+	"github.com/google/uuid"
 )
 
 // ID filters vertices based on their ID field.
-func ID(id int) predicate.Domain {
+func ID(id uuid.UUID) predicate.Domain {
 	return predicate.Domain(func(s *sql.Selector) {
 		s.Where(sql.EQ(s.C(FieldID), id))
 	})
 }
 
 // IDEQ applies the EQ predicate on the ID field.
-func IDEQ(id int) predicate.Domain {
+func IDEQ(id uuid.UUID) predicate.Domain {
 	return predicate.Domain(func(s *sql.Selector) {
 		s.Where(sql.EQ(s.C(FieldID), id))
 	})
 }
 
 // IDNEQ applies the NEQ predicate on the ID field.
-func IDNEQ(id int) predicate.Domain {
+func IDNEQ(id uuid.UUID) predicate.Domain {
 	return predicate.Domain(func(s *sql.Selector) {
 		s.Where(sql.NEQ(s.C(FieldID), id))
 	})
 }
 
 // IDIn applies the In predicate on the ID field.
-func IDIn(ids ...int) predicate.Domain {
+func IDIn(ids ...uuid.UUID) predicate.Domain {
 	return predicate.Domain(func(s *sql.Selector) {
 		// if not arguments were provided, append the FALSE constants,
 		// since we can't apply "IN ()". This will make this predicate falsy.
@@ -49,7 +50,7 @@ func IDIn(ids ...int) predicate.Domain {
 }
 
 // IDNotIn applies the NotIn predicate on the ID field.
-func IDNotIn(ids ...int) predicate.Domain {
+func IDNotIn(ids ...uuid.UUID) predicate.Domain {
 	return predicate.Domain(func(s *sql.Selector) {
 		// if not arguments were provided, append the FALSE constants,
 		// since we can't apply "IN ()". This will make this predicate falsy.
@@ -66,37 +67,30 @@ func IDNotIn(ids ...int) predicate.Domain {
 }
 
 // IDGT applies the GT predicate on the ID field.
-func IDGT(id int) predicate.Domain {
+func IDGT(id uuid.UUID) predicate.Domain {
 	return predicate.Domain(func(s *sql.Selector) {
 		s.Where(sql.GT(s.C(FieldID), id))
 	})
 }
 
 // IDGTE applies the GTE predicate on the ID field.
-func IDGTE(id int) predicate.Domain {
+func IDGTE(id uuid.UUID) predicate.Domain {
 	return predicate.Domain(func(s *sql.Selector) {
 		s.Where(sql.GTE(s.C(FieldID), id))
 	})
 }
 
 // IDLT applies the LT predicate on the ID field.
-func IDLT(id int) predicate.Domain {
+func IDLT(id uuid.UUID) predicate.Domain {
 	return predicate.Domain(func(s *sql.Selector) {
 		s.Where(sql.LT(s.C(FieldID), id))
 	})
 }
 
 // IDLTE applies the LTE predicate on the ID field.
-func IDLTE(id int) predicate.Domain {
+func IDLTE(id uuid.UUID) predicate.Domain {
 	return predicate.Domain(func(s *sql.Selector) {
 		s.Where(sql.LTE(s.C(FieldID), id))
-	})
-}
-
-// ProjectID applies equality check predicate on the "project_id" field. It's identical to ProjectIDEQ.
-func ProjectID(v int) predicate.Domain {
-	return predicate.Domain(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldProjectID), v))
 	})
 }
 
@@ -118,82 +112,6 @@ func CreateAt(v time.Time) predicate.Domain {
 func UpdateAt(v time.Time) predicate.Domain {
 	return predicate.Domain(func(s *sql.Selector) {
 		s.Where(sql.EQ(s.C(FieldUpdateAt), v))
-	})
-}
-
-// ProjectIDEQ applies the EQ predicate on the "project_id" field.
-func ProjectIDEQ(v int) predicate.Domain {
-	return predicate.Domain(func(s *sql.Selector) {
-		s.Where(sql.EQ(s.C(FieldProjectID), v))
-	})
-}
-
-// ProjectIDNEQ applies the NEQ predicate on the "project_id" field.
-func ProjectIDNEQ(v int) predicate.Domain {
-	return predicate.Domain(func(s *sql.Selector) {
-		s.Where(sql.NEQ(s.C(FieldProjectID), v))
-	})
-}
-
-// ProjectIDIn applies the In predicate on the "project_id" field.
-func ProjectIDIn(vs ...int) predicate.Domain {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Domain(func(s *sql.Selector) {
-		// if not arguments were provided, append the FALSE constants,
-		// since we can't apply "IN ()". This will make this predicate falsy.
-		if len(v) == 0 {
-			s.Where(sql.False())
-			return
-		}
-		s.Where(sql.In(s.C(FieldProjectID), v...))
-	})
-}
-
-// ProjectIDNotIn applies the NotIn predicate on the "project_id" field.
-func ProjectIDNotIn(vs ...int) predicate.Domain {
-	v := make([]interface{}, len(vs))
-	for i := range v {
-		v[i] = vs[i]
-	}
-	return predicate.Domain(func(s *sql.Selector) {
-		// if not arguments were provided, append the FALSE constants,
-		// since we can't apply "IN ()". This will make this predicate falsy.
-		if len(v) == 0 {
-			s.Where(sql.False())
-			return
-		}
-		s.Where(sql.NotIn(s.C(FieldProjectID), v...))
-	})
-}
-
-// ProjectIDGT applies the GT predicate on the "project_id" field.
-func ProjectIDGT(v int) predicate.Domain {
-	return predicate.Domain(func(s *sql.Selector) {
-		s.Where(sql.GT(s.C(FieldProjectID), v))
-	})
-}
-
-// ProjectIDGTE applies the GTE predicate on the "project_id" field.
-func ProjectIDGTE(v int) predicate.Domain {
-	return predicate.Domain(func(s *sql.Selector) {
-		s.Where(sql.GTE(s.C(FieldProjectID), v))
-	})
-}
-
-// ProjectIDLT applies the LT predicate on the "project_id" field.
-func ProjectIDLT(v int) predicate.Domain {
-	return predicate.Domain(func(s *sql.Selector) {
-		s.Where(sql.LT(s.C(FieldProjectID), v))
-	})
-}
-
-// ProjectIDLTE applies the LTE predicate on the "project_id" field.
-func ProjectIDLTE(v int) predicate.Domain {
-	return predicate.Domain(func(s *sql.Selector) {
-		s.Where(sql.LTE(s.C(FieldProjectID), v))
 	})
 }
 
@@ -479,6 +397,34 @@ func HasDeploymentWith(preds ...predicate.Deployment) predicate.Domain {
 			sqlgraph.From(Table, FieldID),
 			sqlgraph.To(DeploymentInverseTable, FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, DeploymentTable, DeploymentColumn),
+		)
+		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
+			for _, p := range preds {
+				p(s)
+			}
+		})
+	})
+}
+
+// HasProject applies the HasEdge predicate on the "project" edge.
+func HasProject() predicate.Domain {
+	return predicate.Domain(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(ProjectTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, ProjectTable, ProjectColumn),
+		)
+		sqlgraph.HasNeighbors(s, step)
+	})
+}
+
+// HasProjectWith applies the HasEdge predicate on the "project" edge with a given conditions (other predicates).
+func HasProjectWith(preds ...predicate.Project) predicate.Domain {
+	return predicate.Domain(func(s *sql.Selector) {
+		step := sqlgraph.NewStep(
+			sqlgraph.From(Table, FieldID),
+			sqlgraph.To(ProjectInverseTable, FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, ProjectTable, ProjectColumn),
 		)
 		sqlgraph.HasNeighborsWith(s, step, func(s *sql.Selector) {
 			for _, p := range preds {

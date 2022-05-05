@@ -15,6 +15,7 @@ import (
 	"github.com/fosshostorg/teardrop/ent/domain"
 	"github.com/fosshostorg/teardrop/ent/predicate"
 	"github.com/fosshostorg/teardrop/ent/project"
+	"github.com/google/uuid"
 )
 
 // DeploymentUpdate is the builder for updating Deployment entities.
@@ -56,30 +57,34 @@ func (du *DeploymentUpdate) SetNillableCreateAt(t *time.Time) *DeploymentUpdate 
 	return du
 }
 
-// AddProjectIDs adds the "projects" edge to the Project entity by IDs.
-func (du *DeploymentUpdate) AddProjectIDs(ids ...int) *DeploymentUpdate {
-	du.mutation.AddProjectIDs(ids...)
+// SetProjectID sets the "project" edge to the Project entity by ID.
+func (du *DeploymentUpdate) SetProjectID(id uuid.UUID) *DeploymentUpdate {
+	du.mutation.SetProjectID(id)
 	return du
 }
 
-// AddProjects adds the "projects" edges to the Project entity.
-func (du *DeploymentUpdate) AddProjects(p ...*Project) *DeploymentUpdate {
-	ids := make([]int, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
+// SetNillableProjectID sets the "project" edge to the Project entity by ID if the given value is not nil.
+func (du *DeploymentUpdate) SetNillableProjectID(id *uuid.UUID) *DeploymentUpdate {
+	if id != nil {
+		du = du.SetProjectID(*id)
 	}
-	return du.AddProjectIDs(ids...)
+	return du
+}
+
+// SetProject sets the "project" edge to the Project entity.
+func (du *DeploymentUpdate) SetProject(p *Project) *DeploymentUpdate {
+	return du.SetProjectID(p.ID)
 }
 
 // AddDomainIDs adds the "domains" edge to the Domain entity by IDs.
-func (du *DeploymentUpdate) AddDomainIDs(ids ...int) *DeploymentUpdate {
+func (du *DeploymentUpdate) AddDomainIDs(ids ...uuid.UUID) *DeploymentUpdate {
 	du.mutation.AddDomainIDs(ids...)
 	return du
 }
 
 // AddDomains adds the "domains" edges to the Domain entity.
 func (du *DeploymentUpdate) AddDomains(d ...*Domain) *DeploymentUpdate {
-	ids := make([]int, len(d))
+	ids := make([]uuid.UUID, len(d))
 	for i := range d {
 		ids[i] = d[i].ID
 	}
@@ -91,25 +96,10 @@ func (du *DeploymentUpdate) Mutation() *DeploymentMutation {
 	return du.mutation
 }
 
-// ClearProjects clears all "projects" edges to the Project entity.
-func (du *DeploymentUpdate) ClearProjects() *DeploymentUpdate {
-	du.mutation.ClearProjects()
+// ClearProject clears the "project" edge to the Project entity.
+func (du *DeploymentUpdate) ClearProject() *DeploymentUpdate {
+	du.mutation.ClearProject()
 	return du
-}
-
-// RemoveProjectIDs removes the "projects" edge to Project entities by IDs.
-func (du *DeploymentUpdate) RemoveProjectIDs(ids ...int) *DeploymentUpdate {
-	du.mutation.RemoveProjectIDs(ids...)
-	return du
-}
-
-// RemoveProjects removes "projects" edges to Project entities.
-func (du *DeploymentUpdate) RemoveProjects(p ...*Project) *DeploymentUpdate {
-	ids := make([]int, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
-	}
-	return du.RemoveProjectIDs(ids...)
 }
 
 // ClearDomains clears all "domains" edges to the Domain entity.
@@ -119,14 +109,14 @@ func (du *DeploymentUpdate) ClearDomains() *DeploymentUpdate {
 }
 
 // RemoveDomainIDs removes the "domains" edge to Domain entities by IDs.
-func (du *DeploymentUpdate) RemoveDomainIDs(ids ...int) *DeploymentUpdate {
+func (du *DeploymentUpdate) RemoveDomainIDs(ids ...uuid.UUID) *DeploymentUpdate {
 	du.mutation.RemoveDomainIDs(ids...)
 	return du
 }
 
 // RemoveDomains removes "domains" edges to Domain entities.
 func (du *DeploymentUpdate) RemoveDomains(d ...*Domain) *DeploymentUpdate {
-	ids := make([]int, len(d))
+	ids := make([]uuid.UUID, len(d))
 	for i := range d {
 		ids[i] = d[i].ID
 	}
@@ -193,7 +183,7 @@ func (du *DeploymentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Table:   deployment.Table,
 			Columns: deployment.Columns,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeString,
+				Type:   field.TypeUUID,
 				Column: deployment.FieldID,
 			},
 		},
@@ -226,51 +216,32 @@ func (du *DeploymentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Column: deployment.FieldCreateAt,
 		})
 	}
-	if du.mutation.ProjectsCleared() {
+	if du.mutation.ProjectCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   deployment.ProjectsTable,
-			Columns: []string{deployment.ProjectsColumn},
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   deployment.ProjectTable,
+			Columns: []string{deployment.ProjectColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
+					Type:   field.TypeUUID,
 					Column: project.FieldID,
 				},
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := du.mutation.RemovedProjectsIDs(); len(nodes) > 0 && !du.mutation.ProjectsCleared() {
+	if nodes := du.mutation.ProjectIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   deployment.ProjectsTable,
-			Columns: []string{deployment.ProjectsColumn},
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   deployment.ProjectTable,
+			Columns: []string{deployment.ProjectColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: project.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := du.mutation.ProjectsIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   deployment.ProjectsTable,
-			Columns: []string{deployment.ProjectsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
+					Type:   field.TypeUUID,
 					Column: project.FieldID,
 				},
 			},
@@ -289,7 +260,7 @@ func (du *DeploymentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
+					Type:   field.TypeUUID,
 					Column: domain.FieldID,
 				},
 			},
@@ -305,7 +276,7 @@ func (du *DeploymentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
+					Type:   field.TypeUUID,
 					Column: domain.FieldID,
 				},
 			},
@@ -324,7 +295,7 @@ func (du *DeploymentUpdate) sqlSave(ctx context.Context) (n int, err error) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
+					Type:   field.TypeUUID,
 					Column: domain.FieldID,
 				},
 			},
@@ -379,30 +350,34 @@ func (duo *DeploymentUpdateOne) SetNillableCreateAt(t *time.Time) *DeploymentUpd
 	return duo
 }
 
-// AddProjectIDs adds the "projects" edge to the Project entity by IDs.
-func (duo *DeploymentUpdateOne) AddProjectIDs(ids ...int) *DeploymentUpdateOne {
-	duo.mutation.AddProjectIDs(ids...)
+// SetProjectID sets the "project" edge to the Project entity by ID.
+func (duo *DeploymentUpdateOne) SetProjectID(id uuid.UUID) *DeploymentUpdateOne {
+	duo.mutation.SetProjectID(id)
 	return duo
 }
 
-// AddProjects adds the "projects" edges to the Project entity.
-func (duo *DeploymentUpdateOne) AddProjects(p ...*Project) *DeploymentUpdateOne {
-	ids := make([]int, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
+// SetNillableProjectID sets the "project" edge to the Project entity by ID if the given value is not nil.
+func (duo *DeploymentUpdateOne) SetNillableProjectID(id *uuid.UUID) *DeploymentUpdateOne {
+	if id != nil {
+		duo = duo.SetProjectID(*id)
 	}
-	return duo.AddProjectIDs(ids...)
+	return duo
+}
+
+// SetProject sets the "project" edge to the Project entity.
+func (duo *DeploymentUpdateOne) SetProject(p *Project) *DeploymentUpdateOne {
+	return duo.SetProjectID(p.ID)
 }
 
 // AddDomainIDs adds the "domains" edge to the Domain entity by IDs.
-func (duo *DeploymentUpdateOne) AddDomainIDs(ids ...int) *DeploymentUpdateOne {
+func (duo *DeploymentUpdateOne) AddDomainIDs(ids ...uuid.UUID) *DeploymentUpdateOne {
 	duo.mutation.AddDomainIDs(ids...)
 	return duo
 }
 
 // AddDomains adds the "domains" edges to the Domain entity.
 func (duo *DeploymentUpdateOne) AddDomains(d ...*Domain) *DeploymentUpdateOne {
-	ids := make([]int, len(d))
+	ids := make([]uuid.UUID, len(d))
 	for i := range d {
 		ids[i] = d[i].ID
 	}
@@ -414,25 +389,10 @@ func (duo *DeploymentUpdateOne) Mutation() *DeploymentMutation {
 	return duo.mutation
 }
 
-// ClearProjects clears all "projects" edges to the Project entity.
-func (duo *DeploymentUpdateOne) ClearProjects() *DeploymentUpdateOne {
-	duo.mutation.ClearProjects()
+// ClearProject clears the "project" edge to the Project entity.
+func (duo *DeploymentUpdateOne) ClearProject() *DeploymentUpdateOne {
+	duo.mutation.ClearProject()
 	return duo
-}
-
-// RemoveProjectIDs removes the "projects" edge to Project entities by IDs.
-func (duo *DeploymentUpdateOne) RemoveProjectIDs(ids ...int) *DeploymentUpdateOne {
-	duo.mutation.RemoveProjectIDs(ids...)
-	return duo
-}
-
-// RemoveProjects removes "projects" edges to Project entities.
-func (duo *DeploymentUpdateOne) RemoveProjects(p ...*Project) *DeploymentUpdateOne {
-	ids := make([]int, len(p))
-	for i := range p {
-		ids[i] = p[i].ID
-	}
-	return duo.RemoveProjectIDs(ids...)
 }
 
 // ClearDomains clears all "domains" edges to the Domain entity.
@@ -442,14 +402,14 @@ func (duo *DeploymentUpdateOne) ClearDomains() *DeploymentUpdateOne {
 }
 
 // RemoveDomainIDs removes the "domains" edge to Domain entities by IDs.
-func (duo *DeploymentUpdateOne) RemoveDomainIDs(ids ...int) *DeploymentUpdateOne {
+func (duo *DeploymentUpdateOne) RemoveDomainIDs(ids ...uuid.UUID) *DeploymentUpdateOne {
 	duo.mutation.RemoveDomainIDs(ids...)
 	return duo
 }
 
 // RemoveDomains removes "domains" edges to Domain entities.
 func (duo *DeploymentUpdateOne) RemoveDomains(d ...*Domain) *DeploymentUpdateOne {
-	ids := make([]int, len(d))
+	ids := make([]uuid.UUID, len(d))
 	for i := range d {
 		ids[i] = d[i].ID
 	}
@@ -523,7 +483,7 @@ func (duo *DeploymentUpdateOne) sqlSave(ctx context.Context) (_node *Deployment,
 			Table:   deployment.Table,
 			Columns: deployment.Columns,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeString,
+				Type:   field.TypeUUID,
 				Column: deployment.FieldID,
 			},
 		},
@@ -573,51 +533,32 @@ func (duo *DeploymentUpdateOne) sqlSave(ctx context.Context) (_node *Deployment,
 			Column: deployment.FieldCreateAt,
 		})
 	}
-	if duo.mutation.ProjectsCleared() {
+	if duo.mutation.ProjectCleared() {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   deployment.ProjectsTable,
-			Columns: []string{deployment.ProjectsColumn},
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   deployment.ProjectTable,
+			Columns: []string{deployment.ProjectColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
+					Type:   field.TypeUUID,
 					Column: project.FieldID,
 				},
 			},
 		}
 		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
 	}
-	if nodes := duo.mutation.RemovedProjectsIDs(); len(nodes) > 0 && !duo.mutation.ProjectsCleared() {
+	if nodes := duo.mutation.ProjectIDs(); len(nodes) > 0 {
 		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   deployment.ProjectsTable,
-			Columns: []string{deployment.ProjectsColumn},
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   deployment.ProjectTable,
+			Columns: []string{deployment.ProjectColumn},
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
-					Column: project.FieldID,
-				},
-			},
-		}
-		for _, k := range nodes {
-			edge.Target.Nodes = append(edge.Target.Nodes, k)
-		}
-		_spec.Edges.Clear = append(_spec.Edges.Clear, edge)
-	}
-	if nodes := duo.mutation.ProjectsIDs(); len(nodes) > 0 {
-		edge := &sqlgraph.EdgeSpec{
-			Rel:     sqlgraph.O2M,
-			Inverse: false,
-			Table:   deployment.ProjectsTable,
-			Columns: []string{deployment.ProjectsColumn},
-			Bidi:    false,
-			Target: &sqlgraph.EdgeTarget{
-				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
+					Type:   field.TypeUUID,
 					Column: project.FieldID,
 				},
 			},
@@ -636,7 +577,7 @@ func (duo *DeploymentUpdateOne) sqlSave(ctx context.Context) (_node *Deployment,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
+					Type:   field.TypeUUID,
 					Column: domain.FieldID,
 				},
 			},
@@ -652,7 +593,7 @@ func (duo *DeploymentUpdateOne) sqlSave(ctx context.Context) (_node *Deployment,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
+					Type:   field.TypeUUID,
 					Column: domain.FieldID,
 				},
 			},
@@ -671,7 +612,7 @@ func (duo *DeploymentUpdateOne) sqlSave(ctx context.Context) (_node *Deployment,
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
+					Type:   field.TypeUUID,
 					Column: domain.FieldID,
 				},
 			},

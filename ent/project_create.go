@@ -11,8 +11,10 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/fosshostorg/teardrop/ent/deployment"
+	"github.com/fosshostorg/teardrop/ent/domain"
 	"github.com/fosshostorg/teardrop/ent/project"
 	"github.com/fosshostorg/teardrop/ent/user"
+	"github.com/google/uuid"
 )
 
 // ProjectCreate is the builder for creating a Project entity.
@@ -68,15 +70,29 @@ func (pc *ProjectCreate) SetNillableUpdateAt(t *time.Time) *ProjectCreate {
 	return pc
 }
 
+// SetID sets the "id" field.
+func (pc *ProjectCreate) SetID(u uuid.UUID) *ProjectCreate {
+	pc.mutation.SetID(u)
+	return pc
+}
+
+// SetNillableID sets the "id" field if the given value is not nil.
+func (pc *ProjectCreate) SetNillableID(u *uuid.UUID) *ProjectCreate {
+	if u != nil {
+		pc.SetID(*u)
+	}
+	return pc
+}
+
 // AddUserIDs adds the "users" edge to the User entity by IDs.
-func (pc *ProjectCreate) AddUserIDs(ids ...int) *ProjectCreate {
+func (pc *ProjectCreate) AddUserIDs(ids ...uuid.UUID) *ProjectCreate {
 	pc.mutation.AddUserIDs(ids...)
 	return pc
 }
 
 // AddUsers adds the "users" edges to the User entity.
 func (pc *ProjectCreate) AddUsers(u ...*User) *ProjectCreate {
-	ids := make([]int, len(u))
+	ids := make([]uuid.UUID, len(u))
 	for i := range u {
 		ids[i] = u[i].ID
 	}
@@ -84,18 +100,33 @@ func (pc *ProjectCreate) AddUsers(u ...*User) *ProjectCreate {
 }
 
 // AddDeploymentIDs adds the "deployments" edge to the Deployment entity by IDs.
-func (pc *ProjectCreate) AddDeploymentIDs(ids ...string) *ProjectCreate {
+func (pc *ProjectCreate) AddDeploymentIDs(ids ...uuid.UUID) *ProjectCreate {
 	pc.mutation.AddDeploymentIDs(ids...)
 	return pc
 }
 
 // AddDeployments adds the "deployments" edges to the Deployment entity.
 func (pc *ProjectCreate) AddDeployments(d ...*Deployment) *ProjectCreate {
-	ids := make([]string, len(d))
+	ids := make([]uuid.UUID, len(d))
 	for i := range d {
 		ids[i] = d[i].ID
 	}
 	return pc.AddDeploymentIDs(ids...)
+}
+
+// AddDomainIDs adds the "domains" edge to the Domain entity by IDs.
+func (pc *ProjectCreate) AddDomainIDs(ids ...uuid.UUID) *ProjectCreate {
+	pc.mutation.AddDomainIDs(ids...)
+	return pc
+}
+
+// AddDomains adds the "domains" edges to the Domain entity.
+func (pc *ProjectCreate) AddDomains(d ...*Domain) *ProjectCreate {
+	ids := make([]uuid.UUID, len(d))
+	for i := range d {
+		ids[i] = d[i].ID
+	}
+	return pc.AddDomainIDs(ids...)
 }
 
 // Mutation returns the ProjectMutation object of the builder.
@@ -177,6 +208,10 @@ func (pc *ProjectCreate) defaults() {
 		v := project.DefaultUpdateAt()
 		pc.mutation.SetUpdateAt(v)
 	}
+	if _, ok := pc.mutation.ID(); !ok {
+		v := project.DefaultID()
+		pc.mutation.SetID(v)
+	}
 }
 
 // check runs all checks and user-defined validators on the builder.
@@ -207,8 +242,13 @@ func (pc *ProjectCreate) sqlSave(ctx context.Context) (*Project, error) {
 		}
 		return nil, err
 	}
-	id := _spec.ID.Value.(int64)
-	_node.ID = int(id)
+	if _spec.ID.Value != nil {
+		if id, ok := _spec.ID.Value.(*uuid.UUID); ok {
+			_node.ID = *id
+		} else if err := _node.ID.Scan(_spec.ID.Value); err != nil {
+			return nil, err
+		}
+	}
 	return _node, nil
 }
 
@@ -218,11 +258,15 @@ func (pc *ProjectCreate) createSpec() (*Project, *sqlgraph.CreateSpec) {
 		_spec = &sqlgraph.CreateSpec{
 			Table: project.Table,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
+				Type:   field.TypeUUID,
 				Column: project.FieldID,
 			},
 		}
 	)
+	if id, ok := pc.mutation.ID(); ok {
+		_node.ID = id
+		_spec.ID.Value = &id
+	}
 	if value, ok := pc.mutation.Name(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
 			Type:   field.TypeString,
@@ -272,7 +316,7 @@ func (pc *ProjectCreate) createSpec() (*Project, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeInt,
+					Type:   field.TypeUUID,
 					Column: user.FieldID,
 				},
 			},
@@ -291,8 +335,27 @@ func (pc *ProjectCreate) createSpec() (*Project, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeString,
+					Type:   field.TypeUUID,
 					Column: deployment.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := pc.mutation.DomainsIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.O2M,
+			Inverse: false,
+			Table:   project.DomainsTable,
+			Columns: []string{project.DomainsColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: domain.FieldID,
 				},
 			},
 		}
@@ -346,10 +409,6 @@ func (pcb *ProjectCreateBulk) Save(ctx context.Context) ([]*Project, error) {
 				}
 				mutation.id = &nodes[i].ID
 				mutation.done = true
-				if specs[i].ID.Value != nil {
-					id := specs[i].ID.Value.(int64)
-					nodes[i].ID = int(id)
-				}
 				return nodes[i], nil
 			})
 			for i := len(builder.hooks) - 1; i >= 0; i-- {

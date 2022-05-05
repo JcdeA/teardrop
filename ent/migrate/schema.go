@@ -10,11 +10,11 @@ import (
 var (
 	// DeploymentsColumns holds the columns for the "deployments" table.
 	DeploymentsColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeString},
+		{Name: "id", Type: field.TypeUUID},
 		{Name: "branch", Type: field.TypeString},
 		{Name: "address", Type: field.TypeString},
 		{Name: "create_at", Type: field.TypeTime},
-		{Name: "project_deployments", Type: field.TypeInt, Nullable: true},
+		{Name: "project_deployments", Type: field.TypeUUID, Nullable: true},
 	}
 	// DeploymentsTable holds the schema information for the "deployments" table.
 	DeploymentsTable = &schema.Table{
@@ -32,12 +32,12 @@ var (
 	}
 	// DomainsColumns holds the columns for the "domains" table.
 	DomainsColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeInt, Increment: true},
-		{Name: "project_id", Type: field.TypeInt},
+		{Name: "id", Type: field.TypeUUID},
 		{Name: "domain", Type: field.TypeString},
 		{Name: "create_at", Type: field.TypeTime},
 		{Name: "update_at", Type: field.TypeTime},
-		{Name: "deployment_domains", Type: field.TypeString, Nullable: true},
+		{Name: "deployment_domains", Type: field.TypeUUID, Nullable: true},
+		{Name: "project_domains", Type: field.TypeUUID, Nullable: true},
 	}
 	// DomainsTable holds the schema information for the "domains" table.
 	DomainsTable = &schema.Table{
@@ -47,39 +47,36 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "domains_deployments_domains",
-				Columns:    []*schema.Column{DomainsColumns[5]},
+				Columns:    []*schema.Column{DomainsColumns[4]},
 				RefColumns: []*schema.Column{DeploymentsColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+			{
+				Symbol:     "domains_projects_domains",
+				Columns:    []*schema.Column{DomainsColumns[5]},
+				RefColumns: []*schema.Column{ProjectsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 		},
 	}
 	// ProjectsColumns holds the columns for the "projects" table.
 	ProjectsColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "id", Type: field.TypeUUID},
 		{Name: "name", Type: field.TypeString},
 		{Name: "git", Type: field.TypeString},
 		{Name: "default_branch", Type: field.TypeString},
 		{Name: "create_at", Type: field.TypeTime},
 		{Name: "update_at", Type: field.TypeTime},
-		{Name: "deployment_projects", Type: field.TypeString, Nullable: true},
 	}
 	// ProjectsTable holds the schema information for the "projects" table.
 	ProjectsTable = &schema.Table{
 		Name:       "projects",
 		Columns:    ProjectsColumns,
 		PrimaryKey: []*schema.Column{ProjectsColumns[0]},
-		ForeignKeys: []*schema.ForeignKey{
-			{
-				Symbol:     "projects_deployments_projects",
-				Columns:    []*schema.Column{ProjectsColumns[6]},
-				RefColumns: []*schema.Column{DeploymentsColumns[0]},
-				OnDelete:   schema.SetNull,
-			},
-		},
 	}
 	// UsersColumns holds the columns for the "users" table.
 	UsersColumns = []*schema.Column{
-		{Name: "id", Type: field.TypeInt, Increment: true},
+		{Name: "id", Type: field.TypeUUID},
 		{Name: "name", Type: field.TypeString, SchemaType: map[string]string{"mysql": "varchar(30)"}},
 		{Name: "email", Type: field.TypeString, SchemaType: map[string]string{"mysql": "varchar(69)"}},
 		{Name: "create_at", Type: field.TypeTime},
@@ -93,8 +90,8 @@ var (
 	}
 	// ProjectUsersColumns holds the columns for the "project_users" table.
 	ProjectUsersColumns = []*schema.Column{
-		{Name: "project_id", Type: field.TypeInt},
-		{Name: "user_id", Type: field.TypeInt},
+		{Name: "project_id", Type: field.TypeUUID},
+		{Name: "user_id", Type: field.TypeUUID},
 	}
 	// ProjectUsersTable holds the schema information for the "project_users" table.
 	ProjectUsersTable = &schema.Table{
@@ -129,7 +126,7 @@ var (
 func init() {
 	DeploymentsTable.ForeignKeys[0].RefTable = ProjectsTable
 	DomainsTable.ForeignKeys[0].RefTable = DeploymentsTable
-	ProjectsTable.ForeignKeys[0].RefTable = DeploymentsTable
+	DomainsTable.ForeignKeys[1].RefTable = ProjectsTable
 	ProjectUsersTable.ForeignKeys[0].RefTable = ProjectsTable
 	ProjectUsersTable.ForeignKeys[1].RefTable = UsersTable
 }

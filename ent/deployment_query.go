@@ -16,6 +16,7 @@ import (
 	"github.com/fosshostorg/teardrop/ent/domain"
 	"github.com/fosshostorg/teardrop/ent/predicate"
 	"github.com/fosshostorg/teardrop/ent/project"
+	"github.com/google/uuid"
 )
 
 // DeploymentQuery is the builder for querying Deployment entities.
@@ -28,9 +29,9 @@ type DeploymentQuery struct {
 	fields     []string
 	predicates []predicate.Deployment
 	// eager-loading edges.
-	withProjects *ProjectQuery
-	withDomains  *DomainQuery
-	withFKs      bool
+	withProject *ProjectQuery
+	withDomains *DomainQuery
+	withFKs     bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -67,8 +68,8 @@ func (dq *DeploymentQuery) Order(o ...OrderFunc) *DeploymentQuery {
 	return dq
 }
 
-// QueryProjects chains the current query on the "projects" edge.
-func (dq *DeploymentQuery) QueryProjects() *ProjectQuery {
+// QueryProject chains the current query on the "project" edge.
+func (dq *DeploymentQuery) QueryProject() *ProjectQuery {
 	query := &ProjectQuery{config: dq.config}
 	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
 		if err := dq.prepareQuery(ctx); err != nil {
@@ -81,7 +82,7 @@ func (dq *DeploymentQuery) QueryProjects() *ProjectQuery {
 		step := sqlgraph.NewStep(
 			sqlgraph.From(deployment.Table, deployment.FieldID, selector),
 			sqlgraph.To(project.Table, project.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, deployment.ProjectsTable, deployment.ProjectsColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, deployment.ProjectTable, deployment.ProjectColumn),
 		)
 		fromU = sqlgraph.SetNeighbors(dq.driver.Dialect(), step)
 		return fromU, nil
@@ -135,8 +136,8 @@ func (dq *DeploymentQuery) FirstX(ctx context.Context) *Deployment {
 
 // FirstID returns the first Deployment ID from the query.
 // Returns a *NotFoundError when no Deployment ID was found.
-func (dq *DeploymentQuery) FirstID(ctx context.Context) (id string, err error) {
-	var ids []string
+func (dq *DeploymentQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
+	var ids []uuid.UUID
 	if ids, err = dq.Limit(1).IDs(ctx); err != nil {
 		return
 	}
@@ -148,7 +149,7 @@ func (dq *DeploymentQuery) FirstID(ctx context.Context) (id string, err error) {
 }
 
 // FirstIDX is like FirstID, but panics if an error occurs.
-func (dq *DeploymentQuery) FirstIDX(ctx context.Context) string {
+func (dq *DeploymentQuery) FirstIDX(ctx context.Context) uuid.UUID {
 	id, err := dq.FirstID(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
@@ -186,8 +187,8 @@ func (dq *DeploymentQuery) OnlyX(ctx context.Context) *Deployment {
 // OnlyID is like Only, but returns the only Deployment ID in the query.
 // Returns a *NotSingularError when more than one Deployment ID is found.
 // Returns a *NotFoundError when no entities are found.
-func (dq *DeploymentQuery) OnlyID(ctx context.Context) (id string, err error) {
-	var ids []string
+func (dq *DeploymentQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
+	var ids []uuid.UUID
 	if ids, err = dq.Limit(2).IDs(ctx); err != nil {
 		return
 	}
@@ -203,7 +204,7 @@ func (dq *DeploymentQuery) OnlyID(ctx context.Context) (id string, err error) {
 }
 
 // OnlyIDX is like OnlyID, but panics if an error occurs.
-func (dq *DeploymentQuery) OnlyIDX(ctx context.Context) string {
+func (dq *DeploymentQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 	id, err := dq.OnlyID(ctx)
 	if err != nil {
 		panic(err)
@@ -229,8 +230,8 @@ func (dq *DeploymentQuery) AllX(ctx context.Context) []*Deployment {
 }
 
 // IDs executes the query and returns a list of Deployment IDs.
-func (dq *DeploymentQuery) IDs(ctx context.Context) ([]string, error) {
-	var ids []string
+func (dq *DeploymentQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	var ids []uuid.UUID
 	if err := dq.Select(deployment.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
@@ -238,7 +239,7 @@ func (dq *DeploymentQuery) IDs(ctx context.Context) ([]string, error) {
 }
 
 // IDsX is like IDs, but panics if an error occurs.
-func (dq *DeploymentQuery) IDsX(ctx context.Context) []string {
+func (dq *DeploymentQuery) IDsX(ctx context.Context) []uuid.UUID {
 	ids, err := dq.IDs(ctx)
 	if err != nil {
 		panic(err)
@@ -287,13 +288,13 @@ func (dq *DeploymentQuery) Clone() *DeploymentQuery {
 		return nil
 	}
 	return &DeploymentQuery{
-		config:       dq.config,
-		limit:        dq.limit,
-		offset:       dq.offset,
-		order:        append([]OrderFunc{}, dq.order...),
-		predicates:   append([]predicate.Deployment{}, dq.predicates...),
-		withProjects: dq.withProjects.Clone(),
-		withDomains:  dq.withDomains.Clone(),
+		config:      dq.config,
+		limit:       dq.limit,
+		offset:      dq.offset,
+		order:       append([]OrderFunc{}, dq.order...),
+		predicates:  append([]predicate.Deployment{}, dq.predicates...),
+		withProject: dq.withProject.Clone(),
+		withDomains: dq.withDomains.Clone(),
 		// clone intermediate query.
 		sql:    dq.sql.Clone(),
 		path:   dq.path,
@@ -301,14 +302,14 @@ func (dq *DeploymentQuery) Clone() *DeploymentQuery {
 	}
 }
 
-// WithProjects tells the query-builder to eager-load the nodes that are connected to
-// the "projects" edge. The optional arguments are used to configure the query builder of the edge.
-func (dq *DeploymentQuery) WithProjects(opts ...func(*ProjectQuery)) *DeploymentQuery {
+// WithProject tells the query-builder to eager-load the nodes that are connected to
+// the "project" edge. The optional arguments are used to configure the query builder of the edge.
+func (dq *DeploymentQuery) WithProject(opts ...func(*ProjectQuery)) *DeploymentQuery {
 	query := &ProjectQuery{config: dq.config}
 	for _, opt := range opts {
 		opt(query)
 	}
-	dq.withProjects = query
+	dq.withProject = query
 	return dq
 }
 
@@ -390,10 +391,13 @@ func (dq *DeploymentQuery) sqlAll(ctx context.Context) ([]*Deployment, error) {
 		withFKs     = dq.withFKs
 		_spec       = dq.querySpec()
 		loadedTypes = [2]bool{
-			dq.withProjects != nil,
+			dq.withProject != nil,
 			dq.withDomains != nil,
 		}
 	)
+	if dq.withProject != nil {
+		withFKs = true
+	}
 	if withFKs {
 		_spec.Node.Columns = append(_spec.Node.Columns, deployment.ForeignKeys...)
 	}
@@ -417,38 +421,38 @@ func (dq *DeploymentQuery) sqlAll(ctx context.Context) ([]*Deployment, error) {
 		return nodes, nil
 	}
 
-	if query := dq.withProjects; query != nil {
-		fks := make([]driver.Value, 0, len(nodes))
-		nodeids := make(map[string]*Deployment)
+	if query := dq.withProject; query != nil {
+		ids := make([]uuid.UUID, 0, len(nodes))
+		nodeids := make(map[uuid.UUID][]*Deployment)
 		for i := range nodes {
-			fks = append(fks, nodes[i].ID)
-			nodeids[nodes[i].ID] = nodes[i]
-			nodes[i].Edges.Projects = []*Project{}
+			if nodes[i].project_deployments == nil {
+				continue
+			}
+			fk := *nodes[i].project_deployments
+			if _, ok := nodeids[fk]; !ok {
+				ids = append(ids, fk)
+			}
+			nodeids[fk] = append(nodeids[fk], nodes[i])
 		}
-		query.withFKs = true
-		query.Where(predicate.Project(func(s *sql.Selector) {
-			s.Where(sql.InValues(deployment.ProjectsColumn, fks...))
-		}))
+		query.Where(project.IDIn(ids...))
 		neighbors, err := query.All(ctx)
 		if err != nil {
 			return nil, err
 		}
 		for _, n := range neighbors {
-			fk := n.deployment_projects
-			if fk == nil {
-				return nil, fmt.Errorf(`foreign-key "deployment_projects" is nil for node %v`, n.ID)
-			}
-			node, ok := nodeids[*fk]
+			nodes, ok := nodeids[n.ID]
 			if !ok {
-				return nil, fmt.Errorf(`unexpected foreign-key "deployment_projects" returned %v for node %v`, *fk, n.ID)
+				return nil, fmt.Errorf(`unexpected foreign-key "project_deployments" returned %v`, n.ID)
 			}
-			node.Edges.Projects = append(node.Edges.Projects, n)
+			for i := range nodes {
+				nodes[i].Edges.Project = n
+			}
 		}
 	}
 
 	if query := dq.withDomains; query != nil {
 		fks := make([]driver.Value, 0, len(nodes))
-		nodeids := make(map[string]*Deployment)
+		nodeids := make(map[uuid.UUID]*Deployment)
 		for i := range nodes {
 			fks = append(fks, nodes[i].ID)
 			nodeids[nodes[i].ID] = nodes[i]
@@ -501,7 +505,7 @@ func (dq *DeploymentQuery) querySpec() *sqlgraph.QuerySpec {
 			Table:   deployment.Table,
 			Columns: deployment.Columns,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeString,
+				Type:   field.TypeUUID,
 				Column: deployment.FieldID,
 			},
 		},

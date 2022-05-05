@@ -13,9 +13,11 @@ import (
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/fosshostorg/teardrop/ent/deployment"
+	"github.com/fosshostorg/teardrop/ent/domain"
 	"github.com/fosshostorg/teardrop/ent/predicate"
 	"github.com/fosshostorg/teardrop/ent/project"
 	"github.com/fosshostorg/teardrop/ent/user"
+	"github.com/google/uuid"
 )
 
 // ProjectQuery is the builder for querying Project entities.
@@ -30,7 +32,7 @@ type ProjectQuery struct {
 	// eager-loading edges.
 	withUsers       *UserQuery
 	withDeployments *DeploymentQuery
-	withFKs         bool
+	withDomains     *DomainQuery
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
 	path func(context.Context) (*sql.Selector, error)
@@ -111,6 +113,28 @@ func (pq *ProjectQuery) QueryDeployments() *DeploymentQuery {
 	return query
 }
 
+// QueryDomains chains the current query on the "domains" edge.
+func (pq *ProjectQuery) QueryDomains() *DomainQuery {
+	query := &DomainQuery{config: pq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := pq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := pq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(project.Table, project.FieldID, selector),
+			sqlgraph.To(domain.Table, domain.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, project.DomainsTable, project.DomainsColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(pq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
 // First returns the first Project entity from the query.
 // Returns a *NotFoundError when no Project was found.
 func (pq *ProjectQuery) First(ctx context.Context) (*Project, error) {
@@ -135,8 +159,8 @@ func (pq *ProjectQuery) FirstX(ctx context.Context) *Project {
 
 // FirstID returns the first Project ID from the query.
 // Returns a *NotFoundError when no Project ID was found.
-func (pq *ProjectQuery) FirstID(ctx context.Context) (id int, err error) {
-	var ids []int
+func (pq *ProjectQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
+	var ids []uuid.UUID
 	if ids, err = pq.Limit(1).IDs(ctx); err != nil {
 		return
 	}
@@ -148,7 +172,7 @@ func (pq *ProjectQuery) FirstID(ctx context.Context) (id int, err error) {
 }
 
 // FirstIDX is like FirstID, but panics if an error occurs.
-func (pq *ProjectQuery) FirstIDX(ctx context.Context) int {
+func (pq *ProjectQuery) FirstIDX(ctx context.Context) uuid.UUID {
 	id, err := pq.FirstID(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
@@ -186,8 +210,8 @@ func (pq *ProjectQuery) OnlyX(ctx context.Context) *Project {
 // OnlyID is like Only, but returns the only Project ID in the query.
 // Returns a *NotSingularError when more than one Project ID is found.
 // Returns a *NotFoundError when no entities are found.
-func (pq *ProjectQuery) OnlyID(ctx context.Context) (id int, err error) {
-	var ids []int
+func (pq *ProjectQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
+	var ids []uuid.UUID
 	if ids, err = pq.Limit(2).IDs(ctx); err != nil {
 		return
 	}
@@ -203,7 +227,7 @@ func (pq *ProjectQuery) OnlyID(ctx context.Context) (id int, err error) {
 }
 
 // OnlyIDX is like OnlyID, but panics if an error occurs.
-func (pq *ProjectQuery) OnlyIDX(ctx context.Context) int {
+func (pq *ProjectQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 	id, err := pq.OnlyID(ctx)
 	if err != nil {
 		panic(err)
@@ -229,8 +253,8 @@ func (pq *ProjectQuery) AllX(ctx context.Context) []*Project {
 }
 
 // IDs executes the query and returns a list of Project IDs.
-func (pq *ProjectQuery) IDs(ctx context.Context) ([]int, error) {
-	var ids []int
+func (pq *ProjectQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	var ids []uuid.UUID
 	if err := pq.Select(project.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
@@ -238,7 +262,7 @@ func (pq *ProjectQuery) IDs(ctx context.Context) ([]int, error) {
 }
 
 // IDsX is like IDs, but panics if an error occurs.
-func (pq *ProjectQuery) IDsX(ctx context.Context) []int {
+func (pq *ProjectQuery) IDsX(ctx context.Context) []uuid.UUID {
 	ids, err := pq.IDs(ctx)
 	if err != nil {
 		panic(err)
@@ -294,6 +318,7 @@ func (pq *ProjectQuery) Clone() *ProjectQuery {
 		predicates:      append([]predicate.Project{}, pq.predicates...),
 		withUsers:       pq.withUsers.Clone(),
 		withDeployments: pq.withDeployments.Clone(),
+		withDomains:     pq.withDomains.Clone(),
 		// clone intermediate query.
 		sql:    pq.sql.Clone(),
 		path:   pq.path,
@@ -320,6 +345,17 @@ func (pq *ProjectQuery) WithDeployments(opts ...func(*DeploymentQuery)) *Project
 		opt(query)
 	}
 	pq.withDeployments = query
+	return pq
+}
+
+// WithDomains tells the query-builder to eager-load the nodes that are connected to
+// the "domains" edge. The optional arguments are used to configure the query builder of the edge.
+func (pq *ProjectQuery) WithDomains(opts ...func(*DomainQuery)) *ProjectQuery {
+	query := &DomainQuery{config: pq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	pq.withDomains = query
 	return pq
 }
 
@@ -387,16 +423,13 @@ func (pq *ProjectQuery) prepareQuery(ctx context.Context) error {
 func (pq *ProjectQuery) sqlAll(ctx context.Context) ([]*Project, error) {
 	var (
 		nodes       = []*Project{}
-		withFKs     = pq.withFKs
 		_spec       = pq.querySpec()
-		loadedTypes = [2]bool{
+		loadedTypes = [3]bool{
 			pq.withUsers != nil,
 			pq.withDeployments != nil,
+			pq.withDomains != nil,
 		}
 	)
-	if withFKs {
-		_spec.Node.Columns = append(_spec.Node.Columns, project.ForeignKeys...)
-	}
 	_spec.ScanValues = func(columns []string) ([]interface{}, error) {
 		node := &Project{config: pq.config}
 		nodes = append(nodes, node)
@@ -419,15 +452,15 @@ func (pq *ProjectQuery) sqlAll(ctx context.Context) ([]*Project, error) {
 
 	if query := pq.withUsers; query != nil {
 		fks := make([]driver.Value, 0, len(nodes))
-		ids := make(map[int]*Project, len(nodes))
+		ids := make(map[uuid.UUID]*Project, len(nodes))
 		for _, node := range nodes {
 			ids[node.ID] = node
 			fks = append(fks, node.ID)
 			node.Edges.Users = []*User{}
 		}
 		var (
-			edgeids []int
-			edges   = make(map[int][]*Project)
+			edgeids []uuid.UUID
+			edges   = make(map[uuid.UUID][]*Project)
 		)
 		_spec := &sqlgraph.EdgeQuerySpec{
 			Edge: &sqlgraph.EdgeSpec{
@@ -439,19 +472,19 @@ func (pq *ProjectQuery) sqlAll(ctx context.Context) ([]*Project, error) {
 				s.Where(sql.InValues(project.UsersPrimaryKey[0], fks...))
 			},
 			ScanValues: func() [2]interface{} {
-				return [2]interface{}{new(sql.NullInt64), new(sql.NullInt64)}
+				return [2]interface{}{new(uuid.UUID), new(uuid.UUID)}
 			},
 			Assign: func(out, in interface{}) error {
-				eout, ok := out.(*sql.NullInt64)
+				eout, ok := out.(*uuid.UUID)
 				if !ok || eout == nil {
 					return fmt.Errorf("unexpected id value for edge-out")
 				}
-				ein, ok := in.(*sql.NullInt64)
+				ein, ok := in.(*uuid.UUID)
 				if !ok || ein == nil {
 					return fmt.Errorf("unexpected id value for edge-in")
 				}
-				outValue := int(eout.Int64)
-				inValue := int(ein.Int64)
+				outValue := *eout
+				inValue := *ein
 				node, ok := ids[outValue]
 				if !ok {
 					return fmt.Errorf("unexpected node id in edges: %v", outValue)
@@ -484,7 +517,7 @@ func (pq *ProjectQuery) sqlAll(ctx context.Context) ([]*Project, error) {
 
 	if query := pq.withDeployments; query != nil {
 		fks := make([]driver.Value, 0, len(nodes))
-		nodeids := make(map[int]*Project)
+		nodeids := make(map[uuid.UUID]*Project)
 		for i := range nodes {
 			fks = append(fks, nodes[i].ID)
 			nodeids[nodes[i].ID] = nodes[i]
@@ -508,6 +541,35 @@ func (pq *ProjectQuery) sqlAll(ctx context.Context) ([]*Project, error) {
 				return nil, fmt.Errorf(`unexpected foreign-key "project_deployments" returned %v for node %v`, *fk, n.ID)
 			}
 			node.Edges.Deployments = append(node.Edges.Deployments, n)
+		}
+	}
+
+	if query := pq.withDomains; query != nil {
+		fks := make([]driver.Value, 0, len(nodes))
+		nodeids := make(map[uuid.UUID]*Project)
+		for i := range nodes {
+			fks = append(fks, nodes[i].ID)
+			nodeids[nodes[i].ID] = nodes[i]
+			nodes[i].Edges.Domains = []*Domain{}
+		}
+		query.withFKs = true
+		query.Where(predicate.Domain(func(s *sql.Selector) {
+			s.Where(sql.InValues(project.DomainsColumn, fks...))
+		}))
+		neighbors, err := query.All(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, n := range neighbors {
+			fk := n.project_domains
+			if fk == nil {
+				return nil, fmt.Errorf(`foreign-key "project_domains" is nil for node %v`, n.ID)
+			}
+			node, ok := nodeids[*fk]
+			if !ok {
+				return nil, fmt.Errorf(`unexpected foreign-key "project_domains" returned %v for node %v`, *fk, n.ID)
+			}
+			node.Edges.Domains = append(node.Edges.Domains, n)
 		}
 	}
 
@@ -537,7 +599,7 @@ func (pq *ProjectQuery) querySpec() *sqlgraph.QuerySpec {
 			Table:   project.Table,
 			Columns: project.Columns,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
+				Type:   field.TypeUUID,
 				Column: project.FieldID,
 			},
 		},

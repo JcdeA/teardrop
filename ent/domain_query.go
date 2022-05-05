@@ -14,6 +14,8 @@ import (
 	"github.com/fosshostorg/teardrop/ent/deployment"
 	"github.com/fosshostorg/teardrop/ent/domain"
 	"github.com/fosshostorg/teardrop/ent/predicate"
+	"github.com/fosshostorg/teardrop/ent/project"
+	"github.com/google/uuid"
 )
 
 // DomainQuery is the builder for querying Domain entities.
@@ -27,6 +29,7 @@ type DomainQuery struct {
 	predicates []predicate.Domain
 	// eager-loading edges.
 	withDeployment *DeploymentQuery
+	withProject    *ProjectQuery
 	withFKs        bool
 	// intermediate query (i.e. traversal path).
 	sql  *sql.Selector
@@ -86,6 +89,28 @@ func (dq *DomainQuery) QueryDeployment() *DeploymentQuery {
 	return query
 }
 
+// QueryProject chains the current query on the "project" edge.
+func (dq *DomainQuery) QueryProject() *ProjectQuery {
+	query := &ProjectQuery{config: dq.config}
+	query.path = func(ctx context.Context) (fromU *sql.Selector, err error) {
+		if err := dq.prepareQuery(ctx); err != nil {
+			return nil, err
+		}
+		selector := dq.sqlQuery(ctx)
+		if err := selector.Err(); err != nil {
+			return nil, err
+		}
+		step := sqlgraph.NewStep(
+			sqlgraph.From(domain.Table, domain.FieldID, selector),
+			sqlgraph.To(project.Table, project.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, domain.ProjectTable, domain.ProjectColumn),
+		)
+		fromU = sqlgraph.SetNeighbors(dq.driver.Dialect(), step)
+		return fromU, nil
+	}
+	return query
+}
+
 // First returns the first Domain entity from the query.
 // Returns a *NotFoundError when no Domain was found.
 func (dq *DomainQuery) First(ctx context.Context) (*Domain, error) {
@@ -110,8 +135,8 @@ func (dq *DomainQuery) FirstX(ctx context.Context) *Domain {
 
 // FirstID returns the first Domain ID from the query.
 // Returns a *NotFoundError when no Domain ID was found.
-func (dq *DomainQuery) FirstID(ctx context.Context) (id int, err error) {
-	var ids []int
+func (dq *DomainQuery) FirstID(ctx context.Context) (id uuid.UUID, err error) {
+	var ids []uuid.UUID
 	if ids, err = dq.Limit(1).IDs(ctx); err != nil {
 		return
 	}
@@ -123,7 +148,7 @@ func (dq *DomainQuery) FirstID(ctx context.Context) (id int, err error) {
 }
 
 // FirstIDX is like FirstID, but panics if an error occurs.
-func (dq *DomainQuery) FirstIDX(ctx context.Context) int {
+func (dq *DomainQuery) FirstIDX(ctx context.Context) uuid.UUID {
 	id, err := dq.FirstID(ctx)
 	if err != nil && !IsNotFound(err) {
 		panic(err)
@@ -161,8 +186,8 @@ func (dq *DomainQuery) OnlyX(ctx context.Context) *Domain {
 // OnlyID is like Only, but returns the only Domain ID in the query.
 // Returns a *NotSingularError when more than one Domain ID is found.
 // Returns a *NotFoundError when no entities are found.
-func (dq *DomainQuery) OnlyID(ctx context.Context) (id int, err error) {
-	var ids []int
+func (dq *DomainQuery) OnlyID(ctx context.Context) (id uuid.UUID, err error) {
+	var ids []uuid.UUID
 	if ids, err = dq.Limit(2).IDs(ctx); err != nil {
 		return
 	}
@@ -178,7 +203,7 @@ func (dq *DomainQuery) OnlyID(ctx context.Context) (id int, err error) {
 }
 
 // OnlyIDX is like OnlyID, but panics if an error occurs.
-func (dq *DomainQuery) OnlyIDX(ctx context.Context) int {
+func (dq *DomainQuery) OnlyIDX(ctx context.Context) uuid.UUID {
 	id, err := dq.OnlyID(ctx)
 	if err != nil {
 		panic(err)
@@ -204,8 +229,8 @@ func (dq *DomainQuery) AllX(ctx context.Context) []*Domain {
 }
 
 // IDs executes the query and returns a list of Domain IDs.
-func (dq *DomainQuery) IDs(ctx context.Context) ([]int, error) {
-	var ids []int
+func (dq *DomainQuery) IDs(ctx context.Context) ([]uuid.UUID, error) {
+	var ids []uuid.UUID
 	if err := dq.Select(domain.FieldID).Scan(ctx, &ids); err != nil {
 		return nil, err
 	}
@@ -213,7 +238,7 @@ func (dq *DomainQuery) IDs(ctx context.Context) ([]int, error) {
 }
 
 // IDsX is like IDs, but panics if an error occurs.
-func (dq *DomainQuery) IDsX(ctx context.Context) []int {
+func (dq *DomainQuery) IDsX(ctx context.Context) []uuid.UUID {
 	ids, err := dq.IDs(ctx)
 	if err != nil {
 		panic(err)
@@ -268,6 +293,7 @@ func (dq *DomainQuery) Clone() *DomainQuery {
 		order:          append([]OrderFunc{}, dq.order...),
 		predicates:     append([]predicate.Domain{}, dq.predicates...),
 		withDeployment: dq.withDeployment.Clone(),
+		withProject:    dq.withProject.Clone(),
 		// clone intermediate query.
 		sql:    dq.sql.Clone(),
 		path:   dq.path,
@@ -286,18 +312,29 @@ func (dq *DomainQuery) WithDeployment(opts ...func(*DeploymentQuery)) *DomainQue
 	return dq
 }
 
+// WithProject tells the query-builder to eager-load the nodes that are connected to
+// the "project" edge. The optional arguments are used to configure the query builder of the edge.
+func (dq *DomainQuery) WithProject(opts ...func(*ProjectQuery)) *DomainQuery {
+	query := &ProjectQuery{config: dq.config}
+	for _, opt := range opts {
+		opt(query)
+	}
+	dq.withProject = query
+	return dq
+}
+
 // GroupBy is used to group vertices by one or more fields/columns.
 // It is often used with aggregate functions, like: count, max, mean, min, sum.
 //
 // Example:
 //
 //	var v []struct {
-//		ProjectID int `json:"project_id,omitempty"`
+//		Domain string `json:"domain,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.Domain.Query().
-//		GroupBy(domain.FieldProjectID).
+//		GroupBy(domain.FieldDomain).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 //
@@ -319,11 +356,11 @@ func (dq *DomainQuery) GroupBy(field string, fields ...string) *DomainGroupBy {
 // Example:
 //
 //	var v []struct {
-//		ProjectID int `json:"project_id,omitempty"`
+//		Domain string `json:"domain,omitempty"`
 //	}
 //
 //	client.Domain.Query().
-//		Select(domain.FieldProjectID).
+//		Select(domain.FieldDomain).
 //		Scan(ctx, &v)
 //
 func (dq *DomainQuery) Select(fields ...string) *DomainSelect {
@@ -352,11 +389,12 @@ func (dq *DomainQuery) sqlAll(ctx context.Context) ([]*Domain, error) {
 		nodes       = []*Domain{}
 		withFKs     = dq.withFKs
 		_spec       = dq.querySpec()
-		loadedTypes = [1]bool{
+		loadedTypes = [2]bool{
 			dq.withDeployment != nil,
+			dq.withProject != nil,
 		}
 	)
-	if dq.withDeployment != nil {
+	if dq.withDeployment != nil || dq.withProject != nil {
 		withFKs = true
 	}
 	if withFKs {
@@ -383,8 +421,8 @@ func (dq *DomainQuery) sqlAll(ctx context.Context) ([]*Domain, error) {
 	}
 
 	if query := dq.withDeployment; query != nil {
-		ids := make([]string, 0, len(nodes))
-		nodeids := make(map[string][]*Domain)
+		ids := make([]uuid.UUID, 0, len(nodes))
+		nodeids := make(map[uuid.UUID][]*Domain)
 		for i := range nodes {
 			if nodes[i].deployment_domains == nil {
 				continue
@@ -407,6 +445,35 @@ func (dq *DomainQuery) sqlAll(ctx context.Context) ([]*Domain, error) {
 			}
 			for i := range nodes {
 				nodes[i].Edges.Deployment = n
+			}
+		}
+	}
+
+	if query := dq.withProject; query != nil {
+		ids := make([]uuid.UUID, 0, len(nodes))
+		nodeids := make(map[uuid.UUID][]*Domain)
+		for i := range nodes {
+			if nodes[i].project_domains == nil {
+				continue
+			}
+			fk := *nodes[i].project_domains
+			if _, ok := nodeids[fk]; !ok {
+				ids = append(ids, fk)
+			}
+			nodeids[fk] = append(nodeids[fk], nodes[i])
+		}
+		query.Where(project.IDIn(ids...))
+		neighbors, err := query.All(ctx)
+		if err != nil {
+			return nil, err
+		}
+		for _, n := range neighbors {
+			nodes, ok := nodeids[n.ID]
+			if !ok {
+				return nil, fmt.Errorf(`unexpected foreign-key "project_domains" returned %v`, n.ID)
+			}
+			for i := range nodes {
+				nodes[i].Edges.Project = n
 			}
 		}
 	}
@@ -437,7 +504,7 @@ func (dq *DomainQuery) querySpec() *sqlgraph.QuerySpec {
 			Table:   domain.Table,
 			Columns: domain.Columns,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
+				Type:   field.TypeUUID,
 				Column: domain.FieldID,
 			},
 		},

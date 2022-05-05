@@ -10,15 +10,15 @@ import (
 	"entgo.io/ent/dialect/sql"
 	"github.com/fosshostorg/teardrop/ent/deployment"
 	"github.com/fosshostorg/teardrop/ent/domain"
+	"github.com/fosshostorg/teardrop/ent/project"
+	"github.com/google/uuid"
 )
 
 // Domain is the model entity for the Domain schema.
 type Domain struct {
 	config `json:"-"`
 	// ID of the ent.
-	ID int `json:"id,omitempty"`
-	// ProjectID holds the value of the "project_id" field.
-	ProjectID int `json:"project_id,omitempty"`
+	ID uuid.UUID `json:"id,omitempty"`
 	// Domain holds the value of the "domain" field.
 	Domain string `json:"domain,omitempty"`
 	// CreateAt holds the value of the "create_at" field.
@@ -28,16 +28,19 @@ type Domain struct {
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the DomainQuery when eager-loading is set.
 	Edges              DomainEdges `json:"edges"`
-	deployment_domains *string
+	deployment_domains *uuid.UUID
+	project_domains    *uuid.UUID
 }
 
 // DomainEdges holds the relations/edges for other nodes in the graph.
 type DomainEdges struct {
 	// Deployment holds the value of the deployment edge.
 	Deployment *Deployment `json:"deployment,omitempty"`
+	// Project holds the value of the project edge.
+	Project *Project `json:"project,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [1]bool
+	loadedTypes [2]bool
 }
 
 // DeploymentOrErr returns the Deployment value or an error if the edge
@@ -54,19 +57,35 @@ func (e DomainEdges) DeploymentOrErr() (*Deployment, error) {
 	return nil, &NotLoadedError{edge: "deployment"}
 }
 
+// ProjectOrErr returns the Project value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e DomainEdges) ProjectOrErr() (*Project, error) {
+	if e.loadedTypes[1] {
+		if e.Project == nil {
+			// The edge project was loaded in eager-loading,
+			// but was not found.
+			return nil, &NotFoundError{label: project.Label}
+		}
+		return e.Project, nil
+	}
+	return nil, &NotLoadedError{edge: "project"}
+}
+
 // scanValues returns the types for scanning values from sql.Rows.
 func (*Domain) scanValues(columns []string) ([]interface{}, error) {
 	values := make([]interface{}, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case domain.FieldID, domain.FieldProjectID:
-			values[i] = new(sql.NullInt64)
 		case domain.FieldDomain:
 			values[i] = new(sql.NullString)
 		case domain.FieldCreateAt, domain.FieldUpdateAt:
 			values[i] = new(sql.NullTime)
+		case domain.FieldID:
+			values[i] = new(uuid.UUID)
 		case domain.ForeignKeys[0]: // deployment_domains
-			values[i] = new(sql.NullString)
+			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
+		case domain.ForeignKeys[1]: // project_domains
+			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type Domain", columns[i])
 		}
@@ -83,16 +102,10 @@ func (d *Domain) assignValues(columns []string, values []interface{}) error {
 	for i := range columns {
 		switch columns[i] {
 		case domain.FieldID:
-			value, ok := values[i].(*sql.NullInt64)
-			if !ok {
-				return fmt.Errorf("unexpected type %T for field id", value)
-			}
-			d.ID = int(value.Int64)
-		case domain.FieldProjectID:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for field project_id", values[i])
-			} else if value.Valid {
-				d.ProjectID = int(value.Int64)
+			if value, ok := values[i].(*uuid.UUID); !ok {
+				return fmt.Errorf("unexpected type %T for field id", values[i])
+			} else if value != nil {
+				d.ID = *value
 			}
 		case domain.FieldDomain:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -113,11 +126,18 @@ func (d *Domain) assignValues(columns []string, values []interface{}) error {
 				d.UpdateAt = value.Time
 			}
 		case domain.ForeignKeys[0]:
-			if value, ok := values[i].(*sql.NullString); !ok {
+			if value, ok := values[i].(*sql.NullScanner); !ok {
 				return fmt.Errorf("unexpected type %T for field deployment_domains", values[i])
 			} else if value.Valid {
-				d.deployment_domains = new(string)
-				*d.deployment_domains = value.String
+				d.deployment_domains = new(uuid.UUID)
+				*d.deployment_domains = *value.S.(*uuid.UUID)
+			}
+		case domain.ForeignKeys[1]:
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field project_domains", values[i])
+			} else if value.Valid {
+				d.project_domains = new(uuid.UUID)
+				*d.project_domains = *value.S.(*uuid.UUID)
 			}
 		}
 	}
@@ -127,6 +147,11 @@ func (d *Domain) assignValues(columns []string, values []interface{}) error {
 // QueryDeployment queries the "deployment" edge of the Domain entity.
 func (d *Domain) QueryDeployment() *DeploymentQuery {
 	return (&DomainClient{config: d.config}).QueryDeployment(d)
+}
+
+// QueryProject queries the "project" edge of the Domain entity.
+func (d *Domain) QueryProject() *ProjectQuery {
+	return (&DomainClient{config: d.config}).QueryProject(d)
 }
 
 // Update returns a builder for updating this Domain.
@@ -152,8 +177,6 @@ func (d *Domain) String() string {
 	var builder strings.Builder
 	builder.WriteString("Domain(")
 	builder.WriteString(fmt.Sprintf("id=%v", d.ID))
-	builder.WriteString(", project_id=")
-	builder.WriteString(fmt.Sprintf("%v", d.ProjectID))
 	builder.WriteString(", domain=")
 	builder.WriteString(d.Domain)
 	builder.WriteString(", create_at=")

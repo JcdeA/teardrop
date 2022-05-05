@@ -10,6 +10,7 @@ import (
 	"github.com/fosshostorg/teardrop/ent/project"
 	"github.com/fosshostorg/teardrop/ent/schema"
 	"github.com/fosshostorg/teardrop/ent/user"
+	"github.com/google/uuid"
 )
 
 // The init function reads all schema descriptors with runtime code
@@ -22,6 +23,10 @@ func init() {
 	deploymentDescCreateAt := deploymentFields[3].Descriptor()
 	// deployment.DefaultCreateAt holds the default value on creation for the create_at field.
 	deployment.DefaultCreateAt = deploymentDescCreateAt.Default.(func() time.Time)
+	// deploymentDescID is the schema descriptor for id field.
+	deploymentDescID := deploymentFields[0].Descriptor()
+	// deployment.DefaultID holds the default value on creation for the id field.
+	deployment.DefaultID = deploymentDescID.Default.(func() uuid.UUID)
 	domainFields := schema.Domain{}.Fields()
 	_ = domainFields
 	// domainDescCreateAt is the schema descriptor for create_at field.
@@ -34,28 +39,40 @@ func init() {
 	domain.DefaultUpdateAt = domainDescUpdateAt.Default.(func() time.Time)
 	// domain.UpdateDefaultUpdateAt holds the default value on update for the update_at field.
 	domain.UpdateDefaultUpdateAt = domainDescUpdateAt.UpdateDefault.(func() time.Time)
+	// domainDescID is the schema descriptor for id field.
+	domainDescID := domainFields[0].Descriptor()
+	// domain.DefaultID holds the default value on creation for the id field.
+	domain.DefaultID = domainDescID.Default.(func() uuid.UUID)
 	projectFields := schema.Project{}.Fields()
 	_ = projectFields
 	// projectDescCreateAt is the schema descriptor for create_at field.
-	projectDescCreateAt := projectFields[3].Descriptor()
+	projectDescCreateAt := projectFields[4].Descriptor()
 	// project.DefaultCreateAt holds the default value on creation for the create_at field.
 	project.DefaultCreateAt = projectDescCreateAt.Default.(func() time.Time)
 	// projectDescUpdateAt is the schema descriptor for update_at field.
-	projectDescUpdateAt := projectFields[4].Descriptor()
+	projectDescUpdateAt := projectFields[5].Descriptor()
 	// project.DefaultUpdateAt holds the default value on creation for the update_at field.
 	project.DefaultUpdateAt = projectDescUpdateAt.Default.(func() time.Time)
 	// project.UpdateDefaultUpdateAt holds the default value on update for the update_at field.
 	project.UpdateDefaultUpdateAt = projectDescUpdateAt.UpdateDefault.(func() time.Time)
+	// projectDescID is the schema descriptor for id field.
+	projectDescID := projectFields[0].Descriptor()
+	// project.DefaultID holds the default value on creation for the id field.
+	project.DefaultID = projectDescID.Default.(func() uuid.UUID)
 	userFields := schema.User{}.Fields()
 	_ = userFields
 	// userDescCreateAt is the schema descriptor for create_at field.
-	userDescCreateAt := userFields[2].Descriptor()
+	userDescCreateAt := userFields[3].Descriptor()
 	// user.DefaultCreateAt holds the default value on creation for the create_at field.
 	user.DefaultCreateAt = userDescCreateAt.Default.(func() time.Time)
 	// userDescUpdateAt is the schema descriptor for update_at field.
-	userDescUpdateAt := userFields[3].Descriptor()
+	userDescUpdateAt := userFields[4].Descriptor()
 	// user.DefaultUpdateAt holds the default value on creation for the update_at field.
 	user.DefaultUpdateAt = userDescUpdateAt.Default.(func() time.Time)
 	// user.UpdateDefaultUpdateAt holds the default value on update for the update_at field.
 	user.UpdateDefaultUpdateAt = userDescUpdateAt.UpdateDefault.(func() time.Time)
+	// userDescID is the schema descriptor for id field.
+	userDescID := userFields[0].Descriptor()
+	// user.DefaultID holds the default value on creation for the id field.
+	user.DefaultID = userDescID.Default.(func() uuid.UUID)
 }

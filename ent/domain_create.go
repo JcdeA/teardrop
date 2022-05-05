@@ -12,6 +12,8 @@ import (
 	"entgo.io/ent/schema/field"
 	"github.com/fosshostorg/teardrop/ent/deployment"
 	"github.com/fosshostorg/teardrop/ent/domain"
+	"github.com/fosshostorg/teardrop/ent/project"
+	"github.com/google/uuid"
 )
 
 // DomainCreate is the builder for creating a Domain entity.
@@ -19,12 +21,6 @@ type DomainCreate struct {
 	config
 	mutation *DomainMutation
 	hooks    []Hook
-}
-
-// SetProjectID sets the "project_id" field.
-func (dc *DomainCreate) SetProjectID(i int) *DomainCreate {
-	dc.mutation.SetProjectID(i)
-	return dc
 }
 
 // SetDomain sets the "domain" field.
@@ -61,14 +57,28 @@ func (dc *DomainCreate) SetNillableUpdateAt(t *time.Time) *DomainCreate {
 	return dc
 }
 
+// SetID sets the "id" field.
+func (dc *DomainCreate) SetID(u uuid.UUID) *DomainCreate {
+	dc.mutation.SetID(u)
+	return dc
+}
+
+// SetNillableID sets the "id" field if the given value is not nil.
+func (dc *DomainCreate) SetNillableID(u *uuid.UUID) *DomainCreate {
+	if u != nil {
+		dc.SetID(*u)
+	}
+	return dc
+}
+
 // SetDeploymentID sets the "deployment" edge to the Deployment entity by ID.
-func (dc *DomainCreate) SetDeploymentID(id string) *DomainCreate {
+func (dc *DomainCreate) SetDeploymentID(id uuid.UUID) *DomainCreate {
 	dc.mutation.SetDeploymentID(id)
 	return dc
 }
 
 // SetNillableDeploymentID sets the "deployment" edge to the Deployment entity by ID if the given value is not nil.
-func (dc *DomainCreate) SetNillableDeploymentID(id *string) *DomainCreate {
+func (dc *DomainCreate) SetNillableDeploymentID(id *uuid.UUID) *DomainCreate {
 	if id != nil {
 		dc = dc.SetDeploymentID(*id)
 	}
@@ -78,6 +88,25 @@ func (dc *DomainCreate) SetNillableDeploymentID(id *string) *DomainCreate {
 // SetDeployment sets the "deployment" edge to the Deployment entity.
 func (dc *DomainCreate) SetDeployment(d *Deployment) *DomainCreate {
 	return dc.SetDeploymentID(d.ID)
+}
+
+// SetProjectID sets the "project" edge to the Project entity by ID.
+func (dc *DomainCreate) SetProjectID(id uuid.UUID) *DomainCreate {
+	dc.mutation.SetProjectID(id)
+	return dc
+}
+
+// SetNillableProjectID sets the "project" edge to the Project entity by ID if the given value is not nil.
+func (dc *DomainCreate) SetNillableProjectID(id *uuid.UUID) *DomainCreate {
+	if id != nil {
+		dc = dc.SetProjectID(*id)
+	}
+	return dc
+}
+
+// SetProject sets the "project" edge to the Project entity.
+func (dc *DomainCreate) SetProject(p *Project) *DomainCreate {
+	return dc.SetProjectID(p.ID)
 }
 
 // Mutation returns the DomainMutation object of the builder.
@@ -159,13 +188,14 @@ func (dc *DomainCreate) defaults() {
 		v := domain.DefaultUpdateAt()
 		dc.mutation.SetUpdateAt(v)
 	}
+	if _, ok := dc.mutation.ID(); !ok {
+		v := domain.DefaultID()
+		dc.mutation.SetID(v)
+	}
 }
 
 // check runs all checks and user-defined validators on the builder.
 func (dc *DomainCreate) check() error {
-	if _, ok := dc.mutation.ProjectID(); !ok {
-		return &ValidationError{Name: "project_id", err: errors.New(`ent: missing required field "Domain.project_id"`)}
-	}
 	if _, ok := dc.mutation.Domain(); !ok {
 		return &ValidationError{Name: "domain", err: errors.New(`ent: missing required field "Domain.domain"`)}
 	}
@@ -186,8 +216,13 @@ func (dc *DomainCreate) sqlSave(ctx context.Context) (*Domain, error) {
 		}
 		return nil, err
 	}
-	id := _spec.ID.Value.(int64)
-	_node.ID = int(id)
+	if _spec.ID.Value != nil {
+		if id, ok := _spec.ID.Value.(*uuid.UUID); ok {
+			_node.ID = *id
+		} else if err := _node.ID.Scan(_spec.ID.Value); err != nil {
+			return nil, err
+		}
+	}
 	return _node, nil
 }
 
@@ -197,18 +232,14 @@ func (dc *DomainCreate) createSpec() (*Domain, *sqlgraph.CreateSpec) {
 		_spec = &sqlgraph.CreateSpec{
 			Table: domain.Table,
 			ID: &sqlgraph.FieldSpec{
-				Type:   field.TypeInt,
+				Type:   field.TypeUUID,
 				Column: domain.FieldID,
 			},
 		}
 	)
-	if value, ok := dc.mutation.ProjectID(); ok {
-		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
-			Type:   field.TypeInt,
-			Value:  value,
-			Column: domain.FieldProjectID,
-		})
-		_node.ProjectID = value
+	if id, ok := dc.mutation.ID(); ok {
+		_node.ID = id
+		_spec.ID.Value = &id
 	}
 	if value, ok := dc.mutation.Domain(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
@@ -243,7 +274,7 @@ func (dc *DomainCreate) createSpec() (*Domain, *sqlgraph.CreateSpec) {
 			Bidi:    false,
 			Target: &sqlgraph.EdgeTarget{
 				IDSpec: &sqlgraph.FieldSpec{
-					Type:   field.TypeString,
+					Type:   field.TypeUUID,
 					Column: deployment.FieldID,
 				},
 			},
@@ -252,6 +283,26 @@ func (dc *DomainCreate) createSpec() (*Domain, *sqlgraph.CreateSpec) {
 			edge.Target.Nodes = append(edge.Target.Nodes, k)
 		}
 		_node.deployment_domains = &nodes[0]
+		_spec.Edges = append(_spec.Edges, edge)
+	}
+	if nodes := dc.mutation.ProjectIDs(); len(nodes) > 0 {
+		edge := &sqlgraph.EdgeSpec{
+			Rel:     sqlgraph.M2O,
+			Inverse: true,
+			Table:   domain.ProjectTable,
+			Columns: []string{domain.ProjectColumn},
+			Bidi:    false,
+			Target: &sqlgraph.EdgeTarget{
+				IDSpec: &sqlgraph.FieldSpec{
+					Type:   field.TypeUUID,
+					Column: project.FieldID,
+				},
+			},
+		}
+		for _, k := range nodes {
+			edge.Target.Nodes = append(edge.Target.Nodes, k)
+		}
+		_node.project_domains = &nodes[0]
 		_spec.Edges = append(_spec.Edges, edge)
 	}
 	return _node, _spec
@@ -299,10 +350,6 @@ func (dcb *DomainCreateBulk) Save(ctx context.Context) ([]*Domain, error) {
 				}
 				mutation.id = &nodes[i].ID
 				mutation.done = true
-				if specs[i].ID.Value != nil {
-					id := specs[i].ID.Value.(int64)
-					nodes[i].ID = int(id)
-				}
 				return nodes[i], nil
 			})
 			for i := len(builder.hooks) - 1; i >= 0; i-- {

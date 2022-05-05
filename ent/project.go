@@ -9,13 +9,14 @@ import (
 
 	"entgo.io/ent/dialect/sql"
 	"github.com/fosshostorg/teardrop/ent/project"
+	"github.com/google/uuid"
 )
 
 // Project is the model entity for the Project schema.
 type Project struct {
 	config `json:"-"`
 	// ID of the ent.
-	ID int `json:"id,omitempty"`
+	ID uuid.UUID `json:"id,omitempty"`
 	// Name holds the value of the "name" field.
 	Name string `json:"name,omitempty"`
 	// Git holds the value of the "git" field.
@@ -28,8 +29,7 @@ type Project struct {
 	UpdateAt time.Time `json:"update_at,omitempty"`
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the ProjectQuery when eager-loading is set.
-	Edges               ProjectEdges `json:"edges"`
-	deployment_projects *string
+	Edges ProjectEdges `json:"edges"`
 }
 
 // ProjectEdges holds the relations/edges for other nodes in the graph.
@@ -38,9 +38,11 @@ type ProjectEdges struct {
 	Users []*User `json:"users,omitempty"`
 	// Deployments holds the value of the deployments edge.
 	Deployments []*Deployment `json:"deployments,omitempty"`
+	// Domains holds the value of the domains edge.
+	Domains []*Domain `json:"domains,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [2]bool
+	loadedTypes [3]bool
 }
 
 // UsersOrErr returns the Users value or an error if the edge
@@ -61,19 +63,26 @@ func (e ProjectEdges) DeploymentsOrErr() ([]*Deployment, error) {
 	return nil, &NotLoadedError{edge: "deployments"}
 }
 
+// DomainsOrErr returns the Domains value or an error if the edge
+// was not loaded in eager-loading.
+func (e ProjectEdges) DomainsOrErr() ([]*Domain, error) {
+	if e.loadedTypes[2] {
+		return e.Domains, nil
+	}
+	return nil, &NotLoadedError{edge: "domains"}
+}
+
 // scanValues returns the types for scanning values from sql.Rows.
 func (*Project) scanValues(columns []string) ([]interface{}, error) {
 	values := make([]interface{}, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case project.FieldID:
-			values[i] = new(sql.NullInt64)
 		case project.FieldName, project.FieldGit, project.FieldDefaultBranch:
 			values[i] = new(sql.NullString)
 		case project.FieldCreateAt, project.FieldUpdateAt:
 			values[i] = new(sql.NullTime)
-		case project.ForeignKeys[0]: // deployment_projects
-			values[i] = new(sql.NullString)
+		case project.FieldID:
+			values[i] = new(uuid.UUID)
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type Project", columns[i])
 		}
@@ -90,11 +99,11 @@ func (pr *Project) assignValues(columns []string, values []interface{}) error {
 	for i := range columns {
 		switch columns[i] {
 		case project.FieldID:
-			value, ok := values[i].(*sql.NullInt64)
-			if !ok {
-				return fmt.Errorf("unexpected type %T for field id", value)
+			if value, ok := values[i].(*uuid.UUID); !ok {
+				return fmt.Errorf("unexpected type %T for field id", values[i])
+			} else if value != nil {
+				pr.ID = *value
 			}
-			pr.ID = int(value.Int64)
 		case project.FieldName:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field name", values[i])
@@ -125,13 +134,6 @@ func (pr *Project) assignValues(columns []string, values []interface{}) error {
 			} else if value.Valid {
 				pr.UpdateAt = value.Time
 			}
-		case project.ForeignKeys[0]:
-			if value, ok := values[i].(*sql.NullString); !ok {
-				return fmt.Errorf("unexpected type %T for field deployment_projects", values[i])
-			} else if value.Valid {
-				pr.deployment_projects = new(string)
-				*pr.deployment_projects = value.String
-			}
 		}
 	}
 	return nil
@@ -145,6 +147,11 @@ func (pr *Project) QueryUsers() *UserQuery {
 // QueryDeployments queries the "deployments" edge of the Project entity.
 func (pr *Project) QueryDeployments() *DeploymentQuery {
 	return (&ProjectClient{config: pr.config}).QueryDeployments(pr)
+}
+
+// QueryDomains queries the "domains" edge of the Project entity.
+func (pr *Project) QueryDomains() *DomainQuery {
+	return (&ProjectClient{config: pr.config}).QueryDomains(pr)
 }
 
 // Update returns a builder for updating this Project.

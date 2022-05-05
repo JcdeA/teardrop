@@ -1,8 +1,4 @@
-teardrop
 .env
 .env.testing
 .env.local
 .config.yml
-proxy
-api
-domain-checker

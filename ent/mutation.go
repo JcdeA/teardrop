@@ -14,6 +14,7 @@ import (
 	"github.com/fosshostorg/teardrop/ent/predicate"
 	"github.com/fosshostorg/teardrop/ent/project"
 	"github.com/fosshostorg/teardrop/ent/user"
+	"github.com/google/uuid"
 
 	"entgo.io/ent"
 )
@@ -36,22 +37,21 @@ const (
 // DeploymentMutation represents an operation that mutates the Deployment nodes in the graph.
 type DeploymentMutation struct {
 	config
-	op              Op
-	typ             string
-	id              *string
-	branch          *string
-	address         *string
-	create_at       *time.Time
-	clearedFields   map[string]struct{}
-	projects        map[int]struct{}
-	removedprojects map[int]struct{}
-	clearedprojects bool
-	domains         map[int]struct{}
-	removeddomains  map[int]struct{}
-	cleareddomains  bool
-	done            bool
-	oldValue        func(context.Context) (*Deployment, error)
-	predicates      []predicate.Deployment
+	op             Op
+	typ            string
+	id             *uuid.UUID
+	branch         *string
+	address        *string
+	create_at      *time.Time
+	clearedFields  map[string]struct{}
+	project        *uuid.UUID
+	clearedproject bool
+	domains        map[uuid.UUID]struct{}
+	removeddomains map[uuid.UUID]struct{}
+	cleareddomains bool
+	done           bool
+	oldValue       func(context.Context) (*Deployment, error)
+	predicates     []predicate.Deployment
 }
 
 var _ ent.Mutation = (*DeploymentMutation)(nil)
@@ -74,7 +74,7 @@ func newDeploymentMutation(c config, op Op, opts ...deploymentOption) *Deploymen
 }
 
 // withDeploymentID sets the ID field of the mutation.
-func withDeploymentID(id string) deploymentOption {
+func withDeploymentID(id uuid.UUID) deploymentOption {
 	return func(m *DeploymentMutation) {
 		var (
 			err   error
@@ -126,13 +126,13 @@ func (m DeploymentMutation) Tx() (*Tx, error) {
 
 // SetID sets the value of the id field. Note that this
 // operation is only accepted on creation of Deployment entities.
-func (m *DeploymentMutation) SetID(id string) {
+func (m *DeploymentMutation) SetID(id uuid.UUID) {
 	m.id = &id
 }
 
 // ID returns the ID value in the mutation. Note that the ID is only available
 // if it was provided to the builder or after it was returned from the database.
-func (m *DeploymentMutation) ID() (id string, exists bool) {
+func (m *DeploymentMutation) ID() (id uuid.UUID, exists bool) {
 	if m.id == nil {
 		return
 	}
@@ -143,12 +143,12 @@ func (m *DeploymentMutation) ID() (id string, exists bool) {
 // That means, if the mutation is applied within a transaction with an isolation level such
 // as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
 // or updated by the mutation.
-func (m *DeploymentMutation) IDs(ctx context.Context) ([]string, error) {
+func (m *DeploymentMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
 	switch {
 	case m.op.Is(OpUpdateOne | OpDeleteOne):
 		id, exists := m.ID()
 		if exists {
-			return []string{id}, nil
+			return []uuid.UUID{id}, nil
 		}
 		fallthrough
 	case m.op.Is(OpUpdate | OpDelete):
@@ -266,64 +266,49 @@ func (m *DeploymentMutation) ResetCreateAt() {
 	m.create_at = nil
 }
 
-// AddProjectIDs adds the "projects" edge to the Project entity by ids.
-func (m *DeploymentMutation) AddProjectIDs(ids ...int) {
-	if m.projects == nil {
-		m.projects = make(map[int]struct{})
-	}
-	for i := range ids {
-		m.projects[ids[i]] = struct{}{}
-	}
+// SetProjectID sets the "project" edge to the Project entity by id.
+func (m *DeploymentMutation) SetProjectID(id uuid.UUID) {
+	m.project = &id
 }
 
-// ClearProjects clears the "projects" edge to the Project entity.
-func (m *DeploymentMutation) ClearProjects() {
-	m.clearedprojects = true
+// ClearProject clears the "project" edge to the Project entity.
+func (m *DeploymentMutation) ClearProject() {
+	m.clearedproject = true
 }
 
-// ProjectsCleared reports if the "projects" edge to the Project entity was cleared.
-func (m *DeploymentMutation) ProjectsCleared() bool {
-	return m.clearedprojects
+// ProjectCleared reports if the "project" edge to the Project entity was cleared.
+func (m *DeploymentMutation) ProjectCleared() bool {
+	return m.clearedproject
 }
 
-// RemoveProjectIDs removes the "projects" edge to the Project entity by IDs.
-func (m *DeploymentMutation) RemoveProjectIDs(ids ...int) {
-	if m.removedprojects == nil {
-		m.removedprojects = make(map[int]struct{})
-	}
-	for i := range ids {
-		delete(m.projects, ids[i])
-		m.removedprojects[ids[i]] = struct{}{}
-	}
-}
-
-// RemovedProjects returns the removed IDs of the "projects" edge to the Project entity.
-func (m *DeploymentMutation) RemovedProjectsIDs() (ids []int) {
-	for id := range m.removedprojects {
-		ids = append(ids, id)
+// ProjectID returns the "project" edge ID in the mutation.
+func (m *DeploymentMutation) ProjectID() (id uuid.UUID, exists bool) {
+	if m.project != nil {
+		return *m.project, true
 	}
 	return
 }
 
-// ProjectsIDs returns the "projects" edge IDs in the mutation.
-func (m *DeploymentMutation) ProjectsIDs() (ids []int) {
-	for id := range m.projects {
-		ids = append(ids, id)
+// ProjectIDs returns the "project" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// ProjectID instead. It exists only for internal usage by the builders.
+func (m *DeploymentMutation) ProjectIDs() (ids []uuid.UUID) {
+	if id := m.project; id != nil {
+		ids = append(ids, *id)
 	}
 	return
 }
 
-// ResetProjects resets all changes to the "projects" edge.
-func (m *DeploymentMutation) ResetProjects() {
-	m.projects = nil
-	m.clearedprojects = false
-	m.removedprojects = nil
+// ResetProject resets all changes to the "project" edge.
+func (m *DeploymentMutation) ResetProject() {
+	m.project = nil
+	m.clearedproject = false
 }
 
 // AddDomainIDs adds the "domains" edge to the Domain entity by ids.
-func (m *DeploymentMutation) AddDomainIDs(ids ...int) {
+func (m *DeploymentMutation) AddDomainIDs(ids ...uuid.UUID) {
 	if m.domains == nil {
-		m.domains = make(map[int]struct{})
+		m.domains = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
 		m.domains[ids[i]] = struct{}{}
@@ -341,9 +326,9 @@ func (m *DeploymentMutation) DomainsCleared() bool {
 }
 
 // RemoveDomainIDs removes the "domains" edge to the Domain entity by IDs.
-func (m *DeploymentMutation) RemoveDomainIDs(ids ...int) {
+func (m *DeploymentMutation) RemoveDomainIDs(ids ...uuid.UUID) {
 	if m.removeddomains == nil {
-		m.removeddomains = make(map[int]struct{})
+		m.removeddomains = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
 		delete(m.domains, ids[i])
@@ -352,7 +337,7 @@ func (m *DeploymentMutation) RemoveDomainIDs(ids ...int) {
 }
 
 // RemovedDomains returns the removed IDs of the "domains" edge to the Domain entity.
-func (m *DeploymentMutation) RemovedDomainsIDs() (ids []int) {
+func (m *DeploymentMutation) RemovedDomainsIDs() (ids []uuid.UUID) {
 	for id := range m.removeddomains {
 		ids = append(ids, id)
 	}
@@ -360,7 +345,7 @@ func (m *DeploymentMutation) RemovedDomainsIDs() (ids []int) {
 }
 
 // DomainsIDs returns the "domains" edge IDs in the mutation.
-func (m *DeploymentMutation) DomainsIDs() (ids []int) {
+func (m *DeploymentMutation) DomainsIDs() (ids []uuid.UUID) {
 	for id := range m.domains {
 		ids = append(ids, id)
 	}
@@ -527,8 +512,8 @@ func (m *DeploymentMutation) ResetField(name string) error {
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *DeploymentMutation) AddedEdges() []string {
 	edges := make([]string, 0, 2)
-	if m.projects != nil {
-		edges = append(edges, deployment.EdgeProjects)
+	if m.project != nil {
+		edges = append(edges, deployment.EdgeProject)
 	}
 	if m.domains != nil {
 		edges = append(edges, deployment.EdgeDomains)
@@ -540,12 +525,10 @@ func (m *DeploymentMutation) AddedEdges() []string {
 // name in this mutation.
 func (m *DeploymentMutation) AddedIDs(name string) []ent.Value {
 	switch name {
-	case deployment.EdgeProjects:
-		ids := make([]ent.Value, 0, len(m.projects))
-		for id := range m.projects {
-			ids = append(ids, id)
+	case deployment.EdgeProject:
+		if id := m.project; id != nil {
+			return []ent.Value{*id}
 		}
-		return ids
 	case deployment.EdgeDomains:
 		ids := make([]ent.Value, 0, len(m.domains))
 		for id := range m.domains {
@@ -559,9 +542,6 @@ func (m *DeploymentMutation) AddedIDs(name string) []ent.Value {
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *DeploymentMutation) RemovedEdges() []string {
 	edges := make([]string, 0, 2)
-	if m.removedprojects != nil {
-		edges = append(edges, deployment.EdgeProjects)
-	}
 	if m.removeddomains != nil {
 		edges = append(edges, deployment.EdgeDomains)
 	}
@@ -572,12 +552,6 @@ func (m *DeploymentMutation) RemovedEdges() []string {
 // the given name in this mutation.
 func (m *DeploymentMutation) RemovedIDs(name string) []ent.Value {
 	switch name {
-	case deployment.EdgeProjects:
-		ids := make([]ent.Value, 0, len(m.removedprojects))
-		for id := range m.removedprojects {
-			ids = append(ids, id)
-		}
-		return ids
 	case deployment.EdgeDomains:
 		ids := make([]ent.Value, 0, len(m.removeddomains))
 		for id := range m.removeddomains {
@@ -591,8 +565,8 @@ func (m *DeploymentMutation) RemovedIDs(name string) []ent.Value {
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *DeploymentMutation) ClearedEdges() []string {
 	edges := make([]string, 0, 2)
-	if m.clearedprojects {
-		edges = append(edges, deployment.EdgeProjects)
+	if m.clearedproject {
+		edges = append(edges, deployment.EdgeProject)
 	}
 	if m.cleareddomains {
 		edges = append(edges, deployment.EdgeDomains)
@@ -604,8 +578,8 @@ func (m *DeploymentMutation) ClearedEdges() []string {
 // was cleared in this mutation.
 func (m *DeploymentMutation) EdgeCleared(name string) bool {
 	switch name {
-	case deployment.EdgeProjects:
-		return m.clearedprojects
+	case deployment.EdgeProject:
+		return m.clearedproject
 	case deployment.EdgeDomains:
 		return m.cleareddomains
 	}
@@ -616,6 +590,9 @@ func (m *DeploymentMutation) EdgeCleared(name string) bool {
 // if that edge is not defined in the schema.
 func (m *DeploymentMutation) ClearEdge(name string) error {
 	switch name {
+	case deployment.EdgeProject:
+		m.ClearProject()
+		return nil
 	}
 	return fmt.Errorf("unknown Deployment unique edge %s", name)
 }
@@ -624,8 +601,8 @@ func (m *DeploymentMutation) ClearEdge(name string) error {
 // It returns an error if the edge is not defined in the schema.
 func (m *DeploymentMutation) ResetEdge(name string) error {
 	switch name {
-	case deployment.EdgeProjects:
-		m.ResetProjects()
+	case deployment.EdgeProject:
+		m.ResetProject()
 		return nil
 	case deployment.EdgeDomains:
 		m.ResetDomains()
@@ -639,15 +616,15 @@ type DomainMutation struct {
 	config
 	op                Op
 	typ               string
-	id                *int
-	project_id        *int
-	addproject_id     *int
+	id                *uuid.UUID
 	domain            *string
 	create_at         *time.Time
 	update_at         *time.Time
 	clearedFields     map[string]struct{}
-	deployment        *string
+	deployment        *uuid.UUID
 	cleareddeployment bool
+	project           *uuid.UUID
+	clearedproject    bool
 	done              bool
 	oldValue          func(context.Context) (*Domain, error)
 	predicates        []predicate.Domain
@@ -673,7 +650,7 @@ func newDomainMutation(c config, op Op, opts ...domainOption) *DomainMutation {
 }
 
 // withDomainID sets the ID field of the mutation.
-func withDomainID(id int) domainOption {
+func withDomainID(id uuid.UUID) domainOption {
 	return func(m *DomainMutation) {
 		var (
 			err   error
@@ -723,9 +700,15 @@ func (m DomainMutation) Tx() (*Tx, error) {
 	return tx, nil
 }
 
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of Domain entities.
+func (m *DomainMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
 // ID returns the ID value in the mutation. Note that the ID is only available
 // if it was provided to the builder or after it was returned from the database.
-func (m *DomainMutation) ID() (id int, exists bool) {
+func (m *DomainMutation) ID() (id uuid.UUID, exists bool) {
 	if m.id == nil {
 		return
 	}
@@ -736,12 +719,12 @@ func (m *DomainMutation) ID() (id int, exists bool) {
 // That means, if the mutation is applied within a transaction with an isolation level such
 // as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
 // or updated by the mutation.
-func (m *DomainMutation) IDs(ctx context.Context) ([]int, error) {
+func (m *DomainMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
 	switch {
 	case m.op.Is(OpUpdateOne | OpDeleteOne):
 		id, exists := m.ID()
 		if exists {
-			return []int{id}, nil
+			return []uuid.UUID{id}, nil
 		}
 		fallthrough
 	case m.op.Is(OpUpdate | OpDelete):
@@ -749,62 +732,6 @@ func (m *DomainMutation) IDs(ctx context.Context) ([]int, error) {
 	default:
 		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
 	}
-}
-
-// SetProjectID sets the "project_id" field.
-func (m *DomainMutation) SetProjectID(i int) {
-	m.project_id = &i
-	m.addproject_id = nil
-}
-
-// ProjectID returns the value of the "project_id" field in the mutation.
-func (m *DomainMutation) ProjectID() (r int, exists bool) {
-	v := m.project_id
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// OldProjectID returns the old "project_id" field's value of the Domain entity.
-// If the Domain object wasn't provided to the builder, the object is fetched from the database.
-// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
-func (m *DomainMutation) OldProjectID(ctx context.Context) (v int, err error) {
-	if !m.op.Is(OpUpdateOne) {
-		return v, errors.New("OldProjectID is only allowed on UpdateOne operations")
-	}
-	if m.id == nil || m.oldValue == nil {
-		return v, errors.New("OldProjectID requires an ID field in the mutation")
-	}
-	oldValue, err := m.oldValue(ctx)
-	if err != nil {
-		return v, fmt.Errorf("querying old value for OldProjectID: %w", err)
-	}
-	return oldValue.ProjectID, nil
-}
-
-// AddProjectID adds i to the "project_id" field.
-func (m *DomainMutation) AddProjectID(i int) {
-	if m.addproject_id != nil {
-		*m.addproject_id += i
-	} else {
-		m.addproject_id = &i
-	}
-}
-
-// AddedProjectID returns the value that was added to the "project_id" field in this mutation.
-func (m *DomainMutation) AddedProjectID() (r int, exists bool) {
-	v := m.addproject_id
-	if v == nil {
-		return
-	}
-	return *v, true
-}
-
-// ResetProjectID resets all changes to the "project_id" field.
-func (m *DomainMutation) ResetProjectID() {
-	m.project_id = nil
-	m.addproject_id = nil
 }
 
 // SetDomain sets the "domain" field.
@@ -916,7 +843,7 @@ func (m *DomainMutation) ResetUpdateAt() {
 }
 
 // SetDeploymentID sets the "deployment" edge to the Deployment entity by id.
-func (m *DomainMutation) SetDeploymentID(id string) {
+func (m *DomainMutation) SetDeploymentID(id uuid.UUID) {
 	m.deployment = &id
 }
 
@@ -931,7 +858,7 @@ func (m *DomainMutation) DeploymentCleared() bool {
 }
 
 // DeploymentID returns the "deployment" edge ID in the mutation.
-func (m *DomainMutation) DeploymentID() (id string, exists bool) {
+func (m *DomainMutation) DeploymentID() (id uuid.UUID, exists bool) {
 	if m.deployment != nil {
 		return *m.deployment, true
 	}
@@ -941,7 +868,7 @@ func (m *DomainMutation) DeploymentID() (id string, exists bool) {
 // DeploymentIDs returns the "deployment" edge IDs in the mutation.
 // Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
 // DeploymentID instead. It exists only for internal usage by the builders.
-func (m *DomainMutation) DeploymentIDs() (ids []string) {
+func (m *DomainMutation) DeploymentIDs() (ids []uuid.UUID) {
 	if id := m.deployment; id != nil {
 		ids = append(ids, *id)
 	}
@@ -952,6 +879,45 @@ func (m *DomainMutation) DeploymentIDs() (ids []string) {
 func (m *DomainMutation) ResetDeployment() {
 	m.deployment = nil
 	m.cleareddeployment = false
+}
+
+// SetProjectID sets the "project" edge to the Project entity by id.
+func (m *DomainMutation) SetProjectID(id uuid.UUID) {
+	m.project = &id
+}
+
+// ClearProject clears the "project" edge to the Project entity.
+func (m *DomainMutation) ClearProject() {
+	m.clearedproject = true
+}
+
+// ProjectCleared reports if the "project" edge to the Project entity was cleared.
+func (m *DomainMutation) ProjectCleared() bool {
+	return m.clearedproject
+}
+
+// ProjectID returns the "project" edge ID in the mutation.
+func (m *DomainMutation) ProjectID() (id uuid.UUID, exists bool) {
+	if m.project != nil {
+		return *m.project, true
+	}
+	return
+}
+
+// ProjectIDs returns the "project" edge IDs in the mutation.
+// Note that IDs always returns len(IDs) <= 1 for unique edges, and you should use
+// ProjectID instead. It exists only for internal usage by the builders.
+func (m *DomainMutation) ProjectIDs() (ids []uuid.UUID) {
+	if id := m.project; id != nil {
+		ids = append(ids, *id)
+	}
+	return
+}
+
+// ResetProject resets all changes to the "project" edge.
+func (m *DomainMutation) ResetProject() {
+	m.project = nil
+	m.clearedproject = false
 }
 
 // Where appends a list predicates to the DomainMutation builder.
@@ -973,10 +939,7 @@ func (m *DomainMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *DomainMutation) Fields() []string {
-	fields := make([]string, 0, 4)
-	if m.project_id != nil {
-		fields = append(fields, domain.FieldProjectID)
-	}
+	fields := make([]string, 0, 3)
 	if m.domain != nil {
 		fields = append(fields, domain.FieldDomain)
 	}
@@ -994,8 +957,6 @@ func (m *DomainMutation) Fields() []string {
 // schema.
 func (m *DomainMutation) Field(name string) (ent.Value, bool) {
 	switch name {
-	case domain.FieldProjectID:
-		return m.ProjectID()
 	case domain.FieldDomain:
 		return m.Domain()
 	case domain.FieldCreateAt:
@@ -1011,8 +972,6 @@ func (m *DomainMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *DomainMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
-	case domain.FieldProjectID:
-		return m.OldProjectID(ctx)
 	case domain.FieldDomain:
 		return m.OldDomain(ctx)
 	case domain.FieldCreateAt:
@@ -1028,13 +987,6 @@ func (m *DomainMutation) OldField(ctx context.Context, name string) (ent.Value, 
 // type.
 func (m *DomainMutation) SetField(name string, value ent.Value) error {
 	switch name {
-	case domain.FieldProjectID:
-		v, ok := value.(int)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.SetProjectID(v)
-		return nil
 	case domain.FieldDomain:
 		v, ok := value.(string)
 		if !ok {
@@ -1063,21 +1015,13 @@ func (m *DomainMutation) SetField(name string, value ent.Value) error {
 // AddedFields returns all numeric fields that were incremented/decremented during
 // this mutation.
 func (m *DomainMutation) AddedFields() []string {
-	var fields []string
-	if m.addproject_id != nil {
-		fields = append(fields, domain.FieldProjectID)
-	}
-	return fields
+	return nil
 }
 
 // AddedField returns the numeric value that was incremented/decremented on a field
 // with the given name. The second boolean return value indicates that this field
 // was not set, or was not defined in the schema.
 func (m *DomainMutation) AddedField(name string) (ent.Value, bool) {
-	switch name {
-	case domain.FieldProjectID:
-		return m.AddedProjectID()
-	}
 	return nil, false
 }
 
@@ -1086,13 +1030,6 @@ func (m *DomainMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *DomainMutation) AddField(name string, value ent.Value) error {
 	switch name {
-	case domain.FieldProjectID:
-		v, ok := value.(int)
-		if !ok {
-			return fmt.Errorf("unexpected type %T for field %s", value, name)
-		}
-		m.AddProjectID(v)
-		return nil
 	}
 	return fmt.Errorf("unknown Domain numeric field %s", name)
 }
@@ -1120,9 +1057,6 @@ func (m *DomainMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *DomainMutation) ResetField(name string) error {
 	switch name {
-	case domain.FieldProjectID:
-		m.ResetProjectID()
-		return nil
 	case domain.FieldDomain:
 		m.ResetDomain()
 		return nil
@@ -1138,9 +1072,12 @@ func (m *DomainMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *DomainMutation) AddedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 2)
 	if m.deployment != nil {
 		edges = append(edges, domain.EdgeDeployment)
+	}
+	if m.project != nil {
+		edges = append(edges, domain.EdgeProject)
 	}
 	return edges
 }
@@ -1153,13 +1090,17 @@ func (m *DomainMutation) AddedIDs(name string) []ent.Value {
 		if id := m.deployment; id != nil {
 			return []ent.Value{*id}
 		}
+	case domain.EdgeProject:
+		if id := m.project; id != nil {
+			return []ent.Value{*id}
+		}
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *DomainMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 2)
 	return edges
 }
 
@@ -1173,9 +1114,12 @@ func (m *DomainMutation) RemovedIDs(name string) []ent.Value {
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *DomainMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 1)
+	edges := make([]string, 0, 2)
 	if m.cleareddeployment {
 		edges = append(edges, domain.EdgeDeployment)
+	}
+	if m.clearedproject {
+		edges = append(edges, domain.EdgeProject)
 	}
 	return edges
 }
@@ -1186,6 +1130,8 @@ func (m *DomainMutation) EdgeCleared(name string) bool {
 	switch name {
 	case domain.EdgeDeployment:
 		return m.cleareddeployment
+	case domain.EdgeProject:
+		return m.clearedproject
 	}
 	return false
 }
@@ -1196,6 +1142,9 @@ func (m *DomainMutation) ClearEdge(name string) error {
 	switch name {
 	case domain.EdgeDeployment:
 		m.ClearDeployment()
+		return nil
+	case domain.EdgeProject:
+		m.ClearProject()
 		return nil
 	}
 	return fmt.Errorf("unknown Domain unique edge %s", name)
@@ -1208,6 +1157,9 @@ func (m *DomainMutation) ResetEdge(name string) error {
 	case domain.EdgeDeployment:
 		m.ResetDeployment()
 		return nil
+	case domain.EdgeProject:
+		m.ResetProject()
+		return nil
 	}
 	return fmt.Errorf("unknown Domain edge %s", name)
 }
@@ -1217,19 +1169,22 @@ type ProjectMutation struct {
 	config
 	op                 Op
 	typ                string
-	id                 *int
+	id                 *uuid.UUID
 	name               *string
 	git                *string
 	default_branch     *string
 	create_at          *time.Time
 	update_at          *time.Time
 	clearedFields      map[string]struct{}
-	users              map[int]struct{}
-	removedusers       map[int]struct{}
+	users              map[uuid.UUID]struct{}
+	removedusers       map[uuid.UUID]struct{}
 	clearedusers       bool
-	deployments        map[string]struct{}
-	removeddeployments map[string]struct{}
+	deployments        map[uuid.UUID]struct{}
+	removeddeployments map[uuid.UUID]struct{}
 	cleareddeployments bool
+	domains            map[uuid.UUID]struct{}
+	removeddomains     map[uuid.UUID]struct{}
+	cleareddomains     bool
 	done               bool
 	oldValue           func(context.Context) (*Project, error)
 	predicates         []predicate.Project
@@ -1255,7 +1210,7 @@ func newProjectMutation(c config, op Op, opts ...projectOption) *ProjectMutation
 }
 
 // withProjectID sets the ID field of the mutation.
-func withProjectID(id int) projectOption {
+func withProjectID(id uuid.UUID) projectOption {
 	return func(m *ProjectMutation) {
 		var (
 			err   error
@@ -1305,9 +1260,15 @@ func (m ProjectMutation) Tx() (*Tx, error) {
 	return tx, nil
 }
 
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of Project entities.
+func (m *ProjectMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
 // ID returns the ID value in the mutation. Note that the ID is only available
 // if it was provided to the builder or after it was returned from the database.
-func (m *ProjectMutation) ID() (id int, exists bool) {
+func (m *ProjectMutation) ID() (id uuid.UUID, exists bool) {
 	if m.id == nil {
 		return
 	}
@@ -1318,12 +1279,12 @@ func (m *ProjectMutation) ID() (id int, exists bool) {
 // That means, if the mutation is applied within a transaction with an isolation level such
 // as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
 // or updated by the mutation.
-func (m *ProjectMutation) IDs(ctx context.Context) ([]int, error) {
+func (m *ProjectMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
 	switch {
 	case m.op.Is(OpUpdateOne | OpDeleteOne):
 		id, exists := m.ID()
 		if exists {
-			return []int{id}, nil
+			return []uuid.UUID{id}, nil
 		}
 		fallthrough
 	case m.op.Is(OpUpdate | OpDelete):
@@ -1514,9 +1475,9 @@ func (m *ProjectMutation) ResetUpdateAt() {
 }
 
 // AddUserIDs adds the "users" edge to the User entity by ids.
-func (m *ProjectMutation) AddUserIDs(ids ...int) {
+func (m *ProjectMutation) AddUserIDs(ids ...uuid.UUID) {
 	if m.users == nil {
-		m.users = make(map[int]struct{})
+		m.users = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
 		m.users[ids[i]] = struct{}{}
@@ -1534,9 +1495,9 @@ func (m *ProjectMutation) UsersCleared() bool {
 }
 
 // RemoveUserIDs removes the "users" edge to the User entity by IDs.
-func (m *ProjectMutation) RemoveUserIDs(ids ...int) {
+func (m *ProjectMutation) RemoveUserIDs(ids ...uuid.UUID) {
 	if m.removedusers == nil {
-		m.removedusers = make(map[int]struct{})
+		m.removedusers = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
 		delete(m.users, ids[i])
@@ -1545,7 +1506,7 @@ func (m *ProjectMutation) RemoveUserIDs(ids ...int) {
 }
 
 // RemovedUsers returns the removed IDs of the "users" edge to the User entity.
-func (m *ProjectMutation) RemovedUsersIDs() (ids []int) {
+func (m *ProjectMutation) RemovedUsersIDs() (ids []uuid.UUID) {
 	for id := range m.removedusers {
 		ids = append(ids, id)
 	}
@@ -1553,7 +1514,7 @@ func (m *ProjectMutation) RemovedUsersIDs() (ids []int) {
 }
 
 // UsersIDs returns the "users" edge IDs in the mutation.
-func (m *ProjectMutation) UsersIDs() (ids []int) {
+func (m *ProjectMutation) UsersIDs() (ids []uuid.UUID) {
 	for id := range m.users {
 		ids = append(ids, id)
 	}
@@ -1568,9 +1529,9 @@ func (m *ProjectMutation) ResetUsers() {
 }
 
 // AddDeploymentIDs adds the "deployments" edge to the Deployment entity by ids.
-func (m *ProjectMutation) AddDeploymentIDs(ids ...string) {
+func (m *ProjectMutation) AddDeploymentIDs(ids ...uuid.UUID) {
 	if m.deployments == nil {
-		m.deployments = make(map[string]struct{})
+		m.deployments = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
 		m.deployments[ids[i]] = struct{}{}
@@ -1588,9 +1549,9 @@ func (m *ProjectMutation) DeploymentsCleared() bool {
 }
 
 // RemoveDeploymentIDs removes the "deployments" edge to the Deployment entity by IDs.
-func (m *ProjectMutation) RemoveDeploymentIDs(ids ...string) {
+func (m *ProjectMutation) RemoveDeploymentIDs(ids ...uuid.UUID) {
 	if m.removeddeployments == nil {
-		m.removeddeployments = make(map[string]struct{})
+		m.removeddeployments = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
 		delete(m.deployments, ids[i])
@@ -1599,7 +1560,7 @@ func (m *ProjectMutation) RemoveDeploymentIDs(ids ...string) {
 }
 
 // RemovedDeployments returns the removed IDs of the "deployments" edge to the Deployment entity.
-func (m *ProjectMutation) RemovedDeploymentsIDs() (ids []string) {
+func (m *ProjectMutation) RemovedDeploymentsIDs() (ids []uuid.UUID) {
 	for id := range m.removeddeployments {
 		ids = append(ids, id)
 	}
@@ -1607,7 +1568,7 @@ func (m *ProjectMutation) RemovedDeploymentsIDs() (ids []string) {
 }
 
 // DeploymentsIDs returns the "deployments" edge IDs in the mutation.
-func (m *ProjectMutation) DeploymentsIDs() (ids []string) {
+func (m *ProjectMutation) DeploymentsIDs() (ids []uuid.UUID) {
 	for id := range m.deployments {
 		ids = append(ids, id)
 	}
@@ -1619,6 +1580,60 @@ func (m *ProjectMutation) ResetDeployments() {
 	m.deployments = nil
 	m.cleareddeployments = false
 	m.removeddeployments = nil
+}
+
+// AddDomainIDs adds the "domains" edge to the Domain entity by ids.
+func (m *ProjectMutation) AddDomainIDs(ids ...uuid.UUID) {
+	if m.domains == nil {
+		m.domains = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		m.domains[ids[i]] = struct{}{}
+	}
+}
+
+// ClearDomains clears the "domains" edge to the Domain entity.
+func (m *ProjectMutation) ClearDomains() {
+	m.cleareddomains = true
+}
+
+// DomainsCleared reports if the "domains" edge to the Domain entity was cleared.
+func (m *ProjectMutation) DomainsCleared() bool {
+	return m.cleareddomains
+}
+
+// RemoveDomainIDs removes the "domains" edge to the Domain entity by IDs.
+func (m *ProjectMutation) RemoveDomainIDs(ids ...uuid.UUID) {
+	if m.removeddomains == nil {
+		m.removeddomains = make(map[uuid.UUID]struct{})
+	}
+	for i := range ids {
+		delete(m.domains, ids[i])
+		m.removeddomains[ids[i]] = struct{}{}
+	}
+}
+
+// RemovedDomains returns the removed IDs of the "domains" edge to the Domain entity.
+func (m *ProjectMutation) RemovedDomainsIDs() (ids []uuid.UUID) {
+	for id := range m.removeddomains {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// DomainsIDs returns the "domains" edge IDs in the mutation.
+func (m *ProjectMutation) DomainsIDs() (ids []uuid.UUID) {
+	for id := range m.domains {
+		ids = append(ids, id)
+	}
+	return
+}
+
+// ResetDomains resets all changes to the "domains" edge.
+func (m *ProjectMutation) ResetDomains() {
+	m.domains = nil
+	m.cleareddomains = false
+	m.removeddomains = nil
 }
 
 // Where appends a list predicates to the ProjectMutation builder.
@@ -1807,12 +1822,15 @@ func (m *ProjectMutation) ResetField(name string) error {
 
 // AddedEdges returns all edge names that were set/added in this mutation.
 func (m *ProjectMutation) AddedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.users != nil {
 		edges = append(edges, project.EdgeUsers)
 	}
 	if m.deployments != nil {
 		edges = append(edges, project.EdgeDeployments)
+	}
+	if m.domains != nil {
+		edges = append(edges, project.EdgeDomains)
 	}
 	return edges
 }
@@ -1833,18 +1851,27 @@ func (m *ProjectMutation) AddedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case project.EdgeDomains:
+		ids := make([]ent.Value, 0, len(m.domains))
+		for id := range m.domains {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // RemovedEdges returns all edge names that were removed in this mutation.
 func (m *ProjectMutation) RemovedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.removedusers != nil {
 		edges = append(edges, project.EdgeUsers)
 	}
 	if m.removeddeployments != nil {
 		edges = append(edges, project.EdgeDeployments)
+	}
+	if m.removeddomains != nil {
+		edges = append(edges, project.EdgeDomains)
 	}
 	return edges
 }
@@ -1865,18 +1892,27 @@ func (m *ProjectMutation) RemovedIDs(name string) []ent.Value {
 			ids = append(ids, id)
 		}
 		return ids
+	case project.EdgeDomains:
+		ids := make([]ent.Value, 0, len(m.removeddomains))
+		for id := range m.removeddomains {
+			ids = append(ids, id)
+		}
+		return ids
 	}
 	return nil
 }
 
 // ClearedEdges returns all edge names that were cleared in this mutation.
 func (m *ProjectMutation) ClearedEdges() []string {
-	edges := make([]string, 0, 2)
+	edges := make([]string, 0, 3)
 	if m.clearedusers {
 		edges = append(edges, project.EdgeUsers)
 	}
 	if m.cleareddeployments {
 		edges = append(edges, project.EdgeDeployments)
+	}
+	if m.cleareddomains {
+		edges = append(edges, project.EdgeDomains)
 	}
 	return edges
 }
@@ -1889,6 +1925,8 @@ func (m *ProjectMutation) EdgeCleared(name string) bool {
 		return m.clearedusers
 	case project.EdgeDeployments:
 		return m.cleareddeployments
+	case project.EdgeDomains:
+		return m.cleareddomains
 	}
 	return false
 }
@@ -1911,6 +1949,9 @@ func (m *ProjectMutation) ResetEdge(name string) error {
 	case project.EdgeDeployments:
 		m.ResetDeployments()
 		return nil
+	case project.EdgeDomains:
+		m.ResetDomains()
+		return nil
 	}
 	return fmt.Errorf("unknown Project edge %s", name)
 }
@@ -1920,14 +1961,14 @@ type UserMutation struct {
 	config
 	op              Op
 	typ             string
-	id              *int
+	id              *uuid.UUID
 	name            *string
 	email           *string
 	create_at       *time.Time
 	update_at       *time.Time
 	clearedFields   map[string]struct{}
-	projects        map[int]struct{}
-	removedprojects map[int]struct{}
+	projects        map[uuid.UUID]struct{}
+	removedprojects map[uuid.UUID]struct{}
 	clearedprojects bool
 	done            bool
 	oldValue        func(context.Context) (*User, error)
@@ -1954,7 +1995,7 @@ func newUserMutation(c config, op Op, opts ...userOption) *UserMutation {
 }
 
 // withUserID sets the ID field of the mutation.
-func withUserID(id int) userOption {
+func withUserID(id uuid.UUID) userOption {
 	return func(m *UserMutation) {
 		var (
 			err   error
@@ -2004,9 +2045,15 @@ func (m UserMutation) Tx() (*Tx, error) {
 	return tx, nil
 }
 
+// SetID sets the value of the id field. Note that this
+// operation is only accepted on creation of User entities.
+func (m *UserMutation) SetID(id uuid.UUID) {
+	m.id = &id
+}
+
 // ID returns the ID value in the mutation. Note that the ID is only available
 // if it was provided to the builder or after it was returned from the database.
-func (m *UserMutation) ID() (id int, exists bool) {
+func (m *UserMutation) ID() (id uuid.UUID, exists bool) {
 	if m.id == nil {
 		return
 	}
@@ -2017,12 +2064,12 @@ func (m *UserMutation) ID() (id int, exists bool) {
 // That means, if the mutation is applied within a transaction with an isolation level such
 // as sql.LevelSerializable, the returned ids match the ids of the rows that will be updated
 // or updated by the mutation.
-func (m *UserMutation) IDs(ctx context.Context) ([]int, error) {
+func (m *UserMutation) IDs(ctx context.Context) ([]uuid.UUID, error) {
 	switch {
 	case m.op.Is(OpUpdateOne | OpDeleteOne):
 		id, exists := m.ID()
 		if exists {
-			return []int{id}, nil
+			return []uuid.UUID{id}, nil
 		}
 		fallthrough
 	case m.op.Is(OpUpdate | OpDelete):
@@ -2177,9 +2224,9 @@ func (m *UserMutation) ResetUpdateAt() {
 }
 
 // AddProjectIDs adds the "projects" edge to the Project entity by ids.
-func (m *UserMutation) AddProjectIDs(ids ...int) {
+func (m *UserMutation) AddProjectIDs(ids ...uuid.UUID) {
 	if m.projects == nil {
-		m.projects = make(map[int]struct{})
+		m.projects = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
 		m.projects[ids[i]] = struct{}{}
@@ -2197,9 +2244,9 @@ func (m *UserMutation) ProjectsCleared() bool {
 }
 
 // RemoveProjectIDs removes the "projects" edge to the Project entity by IDs.
-func (m *UserMutation) RemoveProjectIDs(ids ...int) {
+func (m *UserMutation) RemoveProjectIDs(ids ...uuid.UUID) {
 	if m.removedprojects == nil {
-		m.removedprojects = make(map[int]struct{})
+		m.removedprojects = make(map[uuid.UUID]struct{})
 	}
 	for i := range ids {
 		delete(m.projects, ids[i])
@@ -2208,7 +2255,7 @@ func (m *UserMutation) RemoveProjectIDs(ids ...int) {
 }
 
 // RemovedProjects returns the removed IDs of the "projects" edge to the Project entity.
-func (m *UserMutation) RemovedProjectsIDs() (ids []int) {
+func (m *UserMutation) RemovedProjectsIDs() (ids []uuid.UUID) {
 	for id := range m.removedprojects {
 		ids = append(ids, id)
 	}
@@ -2216,7 +2263,7 @@ func (m *UserMutation) RemovedProjectsIDs() (ids []int) {
 }
 
 // ProjectsIDs returns the "projects" edge IDs in the mutation.
-func (m *UserMutation) ProjectsIDs() (ids []int) {
+func (m *UserMutation) ProjectsIDs() (ids []uuid.UUID) {
 	for id := range m.projects {
 		ids = append(ids, id)
 	}

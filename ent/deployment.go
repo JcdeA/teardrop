@@ -9,13 +9,15 @@ import (
 
 	"entgo.io/ent/dialect/sql"
 	"github.com/fosshostorg/teardrop/ent/deployment"
+	"github.com/fosshostorg/teardrop/ent/project"
+	"github.com/google/uuid"
 )
 
 // Deployment is the model entity for the Deployment schema.
 type Deployment struct {
 	config `json:"-"`
 	// ID of the ent.
-	ID string `json:"id,omitempty"`
+	ID uuid.UUID `json:"id,omitempty"`
 	// Branch holds the value of the "branch" field.
 	Branch string `json:"branch,omitempty"`
 	// Address holds the value of the "address" field.
@@ -25,13 +27,13 @@ type Deployment struct {
 	// Edges holds the relations/edges for other nodes in the graph.
 	// The values are being populated by the DeploymentQuery when eager-loading is set.
 	Edges               DeploymentEdges `json:"edges"`
-	project_deployments *int
+	project_deployments *uuid.UUID
 }
 
 // DeploymentEdges holds the relations/edges for other nodes in the graph.
 type DeploymentEdges struct {
-	// Projects holds the value of the projects edge.
-	Projects []*Project `json:"projects,omitempty"`
+	// Project holds the value of the project edge.
+	Project *Project `json:"project,omitempty"`
 	// Domains holds the value of the domains edge.
 	Domains []*Domain `json:"domains,omitempty"`
 	// loadedTypes holds the information for reporting if a
@@ -39,13 +41,18 @@ type DeploymentEdges struct {
 	loadedTypes [2]bool
 }
 
-// ProjectsOrErr returns the Projects value or an error if the edge
-// was not loaded in eager-loading.
-func (e DeploymentEdges) ProjectsOrErr() ([]*Project, error) {
+// ProjectOrErr returns the Project value or an error if the edge
+// was not loaded in eager-loading, or loaded but was not found.
+func (e DeploymentEdges) ProjectOrErr() (*Project, error) {
 	if e.loadedTypes[0] {
-		return e.Projects, nil
+		if e.Project == nil {
+			// The edge project was loaded in eager-loading,
+			// but was not found.
+			return nil, &NotFoundError{label: project.Label}
+		}
+		return e.Project, nil
 	}
-	return nil, &NotLoadedError{edge: "projects"}
+	return nil, &NotLoadedError{edge: "project"}
 }
 
 // DomainsOrErr returns the Domains value or an error if the edge
@@ -62,12 +69,14 @@ func (*Deployment) scanValues(columns []string) ([]interface{}, error) {
 	values := make([]interface{}, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case deployment.FieldID, deployment.FieldBranch, deployment.FieldAddress:
+		case deployment.FieldBranch, deployment.FieldAddress:
 			values[i] = new(sql.NullString)
 		case deployment.FieldCreateAt:
 			values[i] = new(sql.NullTime)
+		case deployment.FieldID:
+			values[i] = new(uuid.UUID)
 		case deployment.ForeignKeys[0]: // project_deployments
-			values[i] = new(sql.NullInt64)
+			values[i] = &sql.NullScanner{S: new(uuid.UUID)}
 		default:
 			return nil, fmt.Errorf("unexpected column %q for type Deployment", columns[i])
 		}
@@ -84,10 +93,10 @@ func (d *Deployment) assignValues(columns []string, values []interface{}) error 
 	for i := range columns {
 		switch columns[i] {
 		case deployment.FieldID:
-			if value, ok := values[i].(*sql.NullString); !ok {
+			if value, ok := values[i].(*uuid.UUID); !ok {
 				return fmt.Errorf("unexpected type %T for field id", values[i])
-			} else if value.Valid {
-				d.ID = value.String
+			} else if value != nil {
+				d.ID = *value
 			}
 		case deployment.FieldBranch:
 			if value, ok := values[i].(*sql.NullString); !ok {
@@ -108,20 +117,20 @@ func (d *Deployment) assignValues(columns []string, values []interface{}) error 
 				d.CreateAt = value.Time
 			}
 		case deployment.ForeignKeys[0]:
-			if value, ok := values[i].(*sql.NullInt64); !ok {
-				return fmt.Errorf("unexpected type %T for edge-field project_deployments", value)
+			if value, ok := values[i].(*sql.NullScanner); !ok {
+				return fmt.Errorf("unexpected type %T for field project_deployments", values[i])
 			} else if value.Valid {
-				d.project_deployments = new(int)
-				*d.project_deployments = int(value.Int64)
+				d.project_deployments = new(uuid.UUID)
+				*d.project_deployments = *value.S.(*uuid.UUID)
 			}
 		}
 	}
 	return nil
 }
 
-// QueryProjects queries the "projects" edge of the Deployment entity.
-func (d *Deployment) QueryProjects() *ProjectQuery {
-	return (&DeploymentClient{config: d.config}).QueryProjects(d)
+// QueryProject queries the "project" edge of the Deployment entity.
+func (d *Deployment) QueryProject() *ProjectQuery {
+	return (&DeploymentClient{config: d.config}).QueryProject(d)
 }
 
 // QueryDomains queries the "domains" edge of the Deployment entity.

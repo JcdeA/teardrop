@@ -9,14 +9,11 @@ import (
 )
 
 func Respond(c echo.Context, resp models.Response) error {
-	var status int
-
 	if resp.Status == 0 {
-		status = 200
-	} else {
-		status = resp.Status
+		resp.Status = 200
 	}
-	return c.JSON(status, resp.ToMap())
+
+	return c.JSON(resp.Status, resp.ToMap())
 }
 
 func RespondError(c echo.Context, status echo.HTTPError, msg ...string) error {

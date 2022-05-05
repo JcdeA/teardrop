@@ -8,6 +8,7 @@ import (
 	"log"
 
 	"github.com/fosshostorg/teardrop/ent/migrate"
+	"github.com/google/uuid"
 
 	"github.com/fosshostorg/teardrop/ent/deployment"
 	"github.com/fosshostorg/teardrop/ent/domain"
@@ -184,7 +185,7 @@ func (c *DeploymentClient) UpdateOne(d *Deployment) *DeploymentUpdateOne {
 }
 
 // UpdateOneID returns an update builder for the given id.
-func (c *DeploymentClient) UpdateOneID(id string) *DeploymentUpdateOne {
+func (c *DeploymentClient) UpdateOneID(id uuid.UUID) *DeploymentUpdateOne {
 	mutation := newDeploymentMutation(c.config, OpUpdateOne, withDeploymentID(id))
 	return &DeploymentUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
@@ -201,7 +202,7 @@ func (c *DeploymentClient) DeleteOne(d *Deployment) *DeploymentDeleteOne {
 }
 
 // DeleteOneID returns a delete builder for the given id.
-func (c *DeploymentClient) DeleteOneID(id string) *DeploymentDeleteOne {
+func (c *DeploymentClient) DeleteOneID(id uuid.UUID) *DeploymentDeleteOne {
 	builder := c.Delete().Where(deployment.ID(id))
 	builder.mutation.id = &id
 	builder.mutation.op = OpDeleteOne
@@ -216,12 +217,12 @@ func (c *DeploymentClient) Query() *DeploymentQuery {
 }
 
 // Get returns a Deployment entity by its id.
-func (c *DeploymentClient) Get(ctx context.Context, id string) (*Deployment, error) {
+func (c *DeploymentClient) Get(ctx context.Context, id uuid.UUID) (*Deployment, error) {
 	return c.Query().Where(deployment.ID(id)).Only(ctx)
 }
 
 // GetX is like Get, but panics if an error occurs.
-func (c *DeploymentClient) GetX(ctx context.Context, id string) *Deployment {
+func (c *DeploymentClient) GetX(ctx context.Context, id uuid.UUID) *Deployment {
 	obj, err := c.Get(ctx, id)
 	if err != nil {
 		panic(err)
@@ -229,15 +230,15 @@ func (c *DeploymentClient) GetX(ctx context.Context, id string) *Deployment {
 	return obj
 }
 
-// QueryProjects queries the projects edge of a Deployment.
-func (c *DeploymentClient) QueryProjects(d *Deployment) *ProjectQuery {
+// QueryProject queries the project edge of a Deployment.
+func (c *DeploymentClient) QueryProject(d *Deployment) *ProjectQuery {
 	query := &ProjectQuery{config: c.config}
 	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
 		id := d.ID
 		step := sqlgraph.NewStep(
 			sqlgraph.From(deployment.Table, deployment.FieldID, id),
 			sqlgraph.To(project.Table, project.FieldID),
-			sqlgraph.Edge(sqlgraph.O2M, false, deployment.ProjectsTable, deployment.ProjectsColumn),
+			sqlgraph.Edge(sqlgraph.M2O, true, deployment.ProjectTable, deployment.ProjectColumn),
 		)
 		fromV = sqlgraph.Neighbors(d.driver.Dialect(), step)
 		return fromV, nil
@@ -306,7 +307,7 @@ func (c *DomainClient) UpdateOne(d *Domain) *DomainUpdateOne {
 }
 
 // UpdateOneID returns an update builder for the given id.
-func (c *DomainClient) UpdateOneID(id int) *DomainUpdateOne {
+func (c *DomainClient) UpdateOneID(id uuid.UUID) *DomainUpdateOne {
 	mutation := newDomainMutation(c.config, OpUpdateOne, withDomainID(id))
 	return &DomainUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
@@ -323,7 +324,7 @@ func (c *DomainClient) DeleteOne(d *Domain) *DomainDeleteOne {
 }
 
 // DeleteOneID returns a delete builder for the given id.
-func (c *DomainClient) DeleteOneID(id int) *DomainDeleteOne {
+func (c *DomainClient) DeleteOneID(id uuid.UUID) *DomainDeleteOne {
 	builder := c.Delete().Where(domain.ID(id))
 	builder.mutation.id = &id
 	builder.mutation.op = OpDeleteOne
@@ -338,12 +339,12 @@ func (c *DomainClient) Query() *DomainQuery {
 }
 
 // Get returns a Domain entity by its id.
-func (c *DomainClient) Get(ctx context.Context, id int) (*Domain, error) {
+func (c *DomainClient) Get(ctx context.Context, id uuid.UUID) (*Domain, error) {
 	return c.Query().Where(domain.ID(id)).Only(ctx)
 }
 
 // GetX is like Get, but panics if an error occurs.
-func (c *DomainClient) GetX(ctx context.Context, id int) *Domain {
+func (c *DomainClient) GetX(ctx context.Context, id uuid.UUID) *Domain {
 	obj, err := c.Get(ctx, id)
 	if err != nil {
 		panic(err)
@@ -360,6 +361,22 @@ func (c *DomainClient) QueryDeployment(d *Domain) *DeploymentQuery {
 			sqlgraph.From(domain.Table, domain.FieldID, id),
 			sqlgraph.To(deployment.Table, deployment.FieldID),
 			sqlgraph.Edge(sqlgraph.M2O, true, domain.DeploymentTable, domain.DeploymentColumn),
+		)
+		fromV = sqlgraph.Neighbors(d.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryProject queries the project edge of a Domain.
+func (c *DomainClient) QueryProject(d *Domain) *ProjectQuery {
+	query := &ProjectQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := d.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(domain.Table, domain.FieldID, id),
+			sqlgraph.To(project.Table, project.FieldID),
+			sqlgraph.Edge(sqlgraph.M2O, true, domain.ProjectTable, domain.ProjectColumn),
 		)
 		fromV = sqlgraph.Neighbors(d.driver.Dialect(), step)
 		return fromV, nil
@@ -412,7 +429,7 @@ func (c *ProjectClient) UpdateOne(pr *Project) *ProjectUpdateOne {
 }
 
 // UpdateOneID returns an update builder for the given id.
-func (c *ProjectClient) UpdateOneID(id int) *ProjectUpdateOne {
+func (c *ProjectClient) UpdateOneID(id uuid.UUID) *ProjectUpdateOne {
 	mutation := newProjectMutation(c.config, OpUpdateOne, withProjectID(id))
 	return &ProjectUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
@@ -429,7 +446,7 @@ func (c *ProjectClient) DeleteOne(pr *Project) *ProjectDeleteOne {
 }
 
 // DeleteOneID returns a delete builder for the given id.
-func (c *ProjectClient) DeleteOneID(id int) *ProjectDeleteOne {
+func (c *ProjectClient) DeleteOneID(id uuid.UUID) *ProjectDeleteOne {
 	builder := c.Delete().Where(project.ID(id))
 	builder.mutation.id = &id
 	builder.mutation.op = OpDeleteOne
@@ -444,12 +461,12 @@ func (c *ProjectClient) Query() *ProjectQuery {
 }
 
 // Get returns a Project entity by its id.
-func (c *ProjectClient) Get(ctx context.Context, id int) (*Project, error) {
+func (c *ProjectClient) Get(ctx context.Context, id uuid.UUID) (*Project, error) {
 	return c.Query().Where(project.ID(id)).Only(ctx)
 }
 
 // GetX is like Get, but panics if an error occurs.
-func (c *ProjectClient) GetX(ctx context.Context, id int) *Project {
+func (c *ProjectClient) GetX(ctx context.Context, id uuid.UUID) *Project {
 	obj, err := c.Get(ctx, id)
 	if err != nil {
 		panic(err)
@@ -482,6 +499,22 @@ func (c *ProjectClient) QueryDeployments(pr *Project) *DeploymentQuery {
 			sqlgraph.From(project.Table, project.FieldID, id),
 			sqlgraph.To(deployment.Table, deployment.FieldID),
 			sqlgraph.Edge(sqlgraph.O2M, false, project.DeploymentsTable, project.DeploymentsColumn),
+		)
+		fromV = sqlgraph.Neighbors(pr.driver.Dialect(), step)
+		return fromV, nil
+	}
+	return query
+}
+
+// QueryDomains queries the domains edge of a Project.
+func (c *ProjectClient) QueryDomains(pr *Project) *DomainQuery {
+	query := &DomainQuery{config: c.config}
+	query.path = func(ctx context.Context) (fromV *sql.Selector, _ error) {
+		id := pr.ID
+		step := sqlgraph.NewStep(
+			sqlgraph.From(project.Table, project.FieldID, id),
+			sqlgraph.To(domain.Table, domain.FieldID),
+			sqlgraph.Edge(sqlgraph.O2M, false, project.DomainsTable, project.DomainsColumn),
 		)
 		fromV = sqlgraph.Neighbors(pr.driver.Dialect(), step)
 		return fromV, nil
@@ -534,7 +567,7 @@ func (c *UserClient) UpdateOne(u *User) *UserUpdateOne {
 }
 
 // UpdateOneID returns an update builder for the given id.
-func (c *UserClient) UpdateOneID(id int) *UserUpdateOne {
+func (c *UserClient) UpdateOneID(id uuid.UUID) *UserUpdateOne {
 	mutation := newUserMutation(c.config, OpUpdateOne, withUserID(id))
 	return &UserUpdateOne{config: c.config, hooks: c.Hooks(), mutation: mutation}
 }
@@ -551,7 +584,7 @@ func (c *UserClient) DeleteOne(u *User) *UserDeleteOne {
 }
 
 // DeleteOneID returns a delete builder for the given id.
-func (c *UserClient) DeleteOneID(id int) *UserDeleteOne {
+func (c *UserClient) DeleteOneID(id uuid.UUID) *UserDeleteOne {
 	builder := c.Delete().Where(user.ID(id))
 	builder.mutation.id = &id
 	builder.mutation.op = OpDeleteOne
@@ -566,12 +599,12 @@ func (c *UserClient) Query() *UserQuery {
 }
 
 // Get returns a User entity by its id.
-func (c *UserClient) Get(ctx context.Context, id int) (*User, error) {
+func (c *UserClient) Get(ctx context.Context, id uuid.UUID) (*User, error) {
 	return c.Query().Where(user.ID(id)).Only(ctx)
 }
 
 // GetX is like Get, but panics if an error occurs.
-func (c *UserClient) GetX(ctx context.Context, id int) *User {
+func (c *UserClient) GetX(ctx context.Context, id uuid.UUID) *User {
 	obj, err := c.Get(ctx, id)
 	if err != nil {
 		panic(err)
