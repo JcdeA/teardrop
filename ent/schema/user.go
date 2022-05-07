@@ -21,11 +21,12 @@ func (User) Fields() []ent.Field {
 		field.UUID("id", uuid.UUID{}).
 			Default(uuid.New),
 		field.String("name").SchemaType(map[string]string{
-			dialect.MySQL: "varchar(30)",
+			dialect.Postgres: "varchar(30)",
 		}),
 		field.String("email").SchemaType(map[string]string{
-			dialect.MySQL: "varchar(69)",
-		}),
+			dialect.Postgres: "varchar(69)",
+		}).Unique(),
+		field.String("image"),
 		field.Time("create_at").Default(time.Now),
 		field.Time("update_at").Default(time.Now).UpdateDefault(time.Now),
 	}
@@ -35,5 +36,6 @@ func (User) Fields() []ent.Field {
 func (User) Edges() []ent.Edge {
 	return []ent.Edge{
 		edge.From("projects", Project.Type).Ref("users"),
+		edge.To("accounts", Account.Type),
 	}
 }

@@ -28,23 +28,17 @@ func Add(c echo.Context) error {
 	deployment, err := client.Deployment.Get(context.Background(), dr.DeploymentId)
 	switch err.(type) {
 	case *ent.NotFoundError:
-		return response.Respond(c, models.Response{
-			Status:  404,
-			Message: "deployment not found",
-		})
+		return response.RespondError(c, *echo.ErrNotFound)
 	default:
 		response.RespondError(c, *echo.ErrInternalServerError)
 	}
 
 	err = client.Domain.Create().SetDeployment(deployment).SetDomain(dr.Domain).Exec(context.Background())
 	if err != nil {
-		response.Respond(c, models.Response{
-			Status:  500,
-			Message: fmt.Sprintf("error: %v", err.Error()),
-		})
+		response.RespondError(c, *echo.ErrInternalServerError, fmt.Sprintf("error: %v", err.Error()))
 	}
 
-	return response.Respond(c, models.Response{
+	return response.Respond(c, 200, models.ErrorResponse{
 		Message: "successfully created domain",
 	})
 

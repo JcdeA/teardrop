@@ -2,18 +2,18 @@ package models
 
 import "encoding/json"
 
-type Response struct {
+type ErrorResponse struct {
 	DocumentationUrl string      `json:"documentation_url"`
 	Message          string      `json:"message"`
 	Data             interface{} `json:"data"`
 	Status           int         `json:"status"`
 }
 
-func (r *Response) ToMap() Map {
+func (r *ErrorResponse) ToMap() Map {
 	return Map{"documentation_url": r.DocumentationUrl, "message": r.Message, "data": r.Data, "status": r.Status}
 }
 
-func (r *Response) ToByteArray() ([]byte, error) {
+func (r *ErrorResponse) ToByteArray() ([]byte, error) {
 	var returnStatus string
 	if (200 <= r.Status) && (r.Status < 300) {
 		returnStatus = "ok"

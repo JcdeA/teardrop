@@ -17,12 +17,16 @@ const (
 	FieldName = "name"
 	// FieldEmail holds the string denoting the email field in the database.
 	FieldEmail = "email"
+	// FieldImage holds the string denoting the image field in the database.
+	FieldImage = "image"
 	// FieldCreateAt holds the string denoting the create_at field in the database.
 	FieldCreateAt = "create_at"
 	// FieldUpdateAt holds the string denoting the update_at field in the database.
 	FieldUpdateAt = "update_at"
 	// EdgeProjects holds the string denoting the projects edge name in mutations.
 	EdgeProjects = "projects"
+	// EdgeAccounts holds the string denoting the accounts edge name in mutations.
+	EdgeAccounts = "accounts"
 	// Table holds the table name of the user in the database.
 	Table = "users"
 	// ProjectsTable is the table that holds the projects relation/edge. The primary key declared below.
@@ -30,6 +34,13 @@ const (
 	// ProjectsInverseTable is the table name for the Project entity.
 	// It exists in this package in order to avoid circular dependency with the "project" package.
 	ProjectsInverseTable = "projects"
+	// AccountsTable is the table that holds the accounts relation/edge.
+	AccountsTable = "accounts"
+	// AccountsInverseTable is the table name for the Account entity.
+	// It exists in this package in order to avoid circular dependency with the "account" package.
+	AccountsInverseTable = "accounts"
+	// AccountsColumn is the table column denoting the accounts relation/edge.
+	AccountsColumn = "user_accounts"
 )
 
 // Columns holds all SQL columns for user fields.
@@ -37,6 +48,7 @@ var Columns = []string{
 	FieldID,
 	FieldName,
 	FieldEmail,
+	FieldImage,
 	FieldCreateAt,
 	FieldUpdateAt,
 }

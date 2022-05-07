@@ -21,6 +21,8 @@ type User struct {
 	Name string `json:"name,omitempty"`
 	// Email holds the value of the "email" field.
 	Email string `json:"email,omitempty"`
+	// Image holds the value of the "image" field.
+	Image string `json:"image,omitempty"`
 	// CreateAt holds the value of the "create_at" field.
 	CreateAt time.Time `json:"create_at,omitempty"`
 	// UpdateAt holds the value of the "update_at" field.
@@ -34,9 +36,11 @@ type User struct {
 type UserEdges struct {
 	// Projects holds the value of the projects edge.
 	Projects []*Project `json:"projects,omitempty"`
+	// Accounts holds the value of the accounts edge.
+	Accounts []*Account `json:"accounts,omitempty"`
 	// loadedTypes holds the information for reporting if a
 	// type was loaded (or requested) in eager-loading or not.
-	loadedTypes [1]bool
+	loadedTypes [2]bool
 }
 
 // ProjectsOrErr returns the Projects value or an error if the edge
@@ -48,12 +52,21 @@ func (e UserEdges) ProjectsOrErr() ([]*Project, error) {
 	return nil, &NotLoadedError{edge: "projects"}
 }
 
+// AccountsOrErr returns the Accounts value or an error if the edge
+// was not loaded in eager-loading.
+func (e UserEdges) AccountsOrErr() ([]*Account, error) {
+	if e.loadedTypes[1] {
+		return e.Accounts, nil
+	}
+	return nil, &NotLoadedError{edge: "accounts"}
+}
+
 // scanValues returns the types for scanning values from sql.Rows.
 func (*User) scanValues(columns []string) ([]interface{}, error) {
 	values := make([]interface{}, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case user.FieldName, user.FieldEmail:
+		case user.FieldName, user.FieldEmail, user.FieldImage:
 			values[i] = new(sql.NullString)
 		case user.FieldCreateAt, user.FieldUpdateAt:
 			values[i] = new(sql.NullTime)
@@ -92,6 +105,12 @@ func (u *User) assignValues(columns []string, values []interface{}) error {
 			} else if value.Valid {
 				u.Email = value.String
 			}
+		case user.FieldImage:
+			if value, ok := values[i].(*sql.NullString); !ok {
+				return fmt.Errorf("unexpected type %T for field image", values[i])
+			} else if value.Valid {
+				u.Image = value.String
+			}
 		case user.FieldCreateAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field create_at", values[i])
@@ -112,6 +131,11 @@ func (u *User) assignValues(columns []string, values []interface{}) error {
 // QueryProjects queries the "projects" edge of the User entity.
 func (u *User) QueryProjects() *ProjectQuery {
 	return (&UserClient{config: u.config}).QueryProjects(u)
+}
+
+// QueryAccounts queries the "accounts" edge of the User entity.
+func (u *User) QueryAccounts() *AccountQuery {
+	return (&UserClient{config: u.config}).QueryAccounts(u)
 }
 
 // Update returns a builder for updating this User.
@@ -141,6 +165,8 @@ func (u *User) String() string {
 	builder.WriteString(u.Name)
 	builder.WriteString(", email=")
 	builder.WriteString(u.Email)
+	builder.WriteString(", image=")
+	builder.WriteString(u.Image)
 	builder.WriteString(", create_at=")
 	builder.WriteString(u.CreateAt.Format(time.ANSIC))
 	builder.WriteString(", update_at=")

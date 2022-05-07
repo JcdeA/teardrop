@@ -21,9 +21,9 @@ func checkDomainHandler(c echo.Context) error {
 	}
 
 	if exists {
-		return response.Respond(c, models.Response{Message: "doman linked to deployment"})
+		return response.Respond(c, 200, models.ErrorResponse{Message: "doman linked to deployment"})
 	} else {
-		return response.Respond(c, models.Response{Message: "domain not linked to deployment", Status: 404})
+		return response.RespondError(c, *echo.ErrNotFound)
 	}
 
 }

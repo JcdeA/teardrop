@@ -8,6 +8,39 @@ import (
 )
 
 var (
+	// AccountsColumns holds the columns for the "accounts" table.
+	AccountsColumns = []*schema.Column{
+		{Name: "id", Type: field.TypeUUID, Unique: true},
+		{Name: "access_token", Type: field.TypeString, SchemaType: map[string]string{"postgres": "text"}},
+		{Name: "refresh_token", Type: field.TypeString, SchemaType: map[string]string{"postgres": "text"}},
+		{Name: "token_type", Type: field.TypeString},
+		{Name: "expires_at", Type: field.TypeTime},
+		{Name: "provider_account_id", Type: field.TypeString},
+		{Name: "scope", Type: field.TypeString},
+		{Name: "provider", Type: field.TypeString},
+		{Name: "user_accounts", Type: field.TypeUUID, Nullable: true},
+	}
+	// AccountsTable holds the schema information for the "accounts" table.
+	AccountsTable = &schema.Table{
+		Name:       "accounts",
+		Columns:    AccountsColumns,
+		PrimaryKey: []*schema.Column{AccountsColumns[0]},
+		ForeignKeys: []*schema.ForeignKey{
+			{
+				Symbol:     "accounts_users_accounts",
+				Columns:    []*schema.Column{AccountsColumns[8]},
+				RefColumns: []*schema.Column{UsersColumns[0]},
+				OnDelete:   schema.SetNull,
+			},
+		},
+		Indexes: []*schema.Index{
+			{
+				Name:    "account_provider_provider_account_id",
+				Unique:  true,
+				Columns: []*schema.Column{AccountsColumns[7], AccountsColumns[5]},
+			},
+		},
+	}
 	// DeploymentsColumns holds the columns for the "deployments" table.
 	DeploymentsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
@@ -77,8 +110,9 @@ var (
 	// UsersColumns holds the columns for the "users" table.
 	UsersColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeUUID},
-		{Name: "name", Type: field.TypeString, SchemaType: map[string]string{"mysql": "varchar(30)"}},
-		{Name: "email", Type: field.TypeString, SchemaType: map[string]string{"mysql": "varchar(69)"}},
+		{Name: "name", Type: field.TypeString, SchemaType: map[string]string{"postgres": "varchar(30)"}},
+		{Name: "email", Type: field.TypeString, Unique: true, SchemaType: map[string]string{"postgres": "varchar(69)"}},
+		{Name: "image", Type: field.TypeString},
 		{Name: "create_at", Type: field.TypeTime},
 		{Name: "update_at", Type: field.TypeTime},
 	}
@@ -115,6 +149,7 @@ var (
 	}
 	// Tables holds all the tables in the schema.
 	Tables = []*schema.Table{
+		AccountsTable,
 		DeploymentsTable,
 		DomainsTable,
 		ProjectsTable,
@@ -124,6 +159,7 @@ var (
 )
 
 func init() {
+	AccountsTable.ForeignKeys[0].RefTable = UsersTable
 	DeploymentsTable.ForeignKeys[0].RefTable = ProjectsTable
 	DomainsTable.ForeignKeys[0].RefTable = DeploymentsTable
 	DomainsTable.ForeignKeys[1].RefTable = ProjectsTable

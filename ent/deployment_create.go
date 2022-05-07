@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"time"
 
+	"entgo.io/ent/dialect"
+	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/fosshostorg/teardrop/ent/deployment"
@@ -21,6 +23,7 @@ type DeploymentCreate struct {
 	config
 	mutation *DeploymentMutation
 	hooks    []Hook
+	conflict []sql.ConflictOption
 }
 
 // SetBranch sets the "branch" field.
@@ -221,6 +224,7 @@ func (dc *DeploymentCreate) createSpec() (*Deployment, *sqlgraph.CreateSpec) {
 			},
 		}
 	)
+	_spec.OnConflict = dc.conflict
 	if id, ok := dc.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
@@ -291,10 +295,228 @@ func (dc *DeploymentCreate) createSpec() (*Deployment, *sqlgraph.CreateSpec) {
 	return _node, _spec
 }
 
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.Deployment.Create().
+//		SetBranch(v).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.DeploymentUpsert) {
+//			SetBranch(v+v).
+//		}).
+//		Exec(ctx)
+//
+func (dc *DeploymentCreate) OnConflict(opts ...sql.ConflictOption) *DeploymentUpsertOne {
+	dc.conflict = opts
+	return &DeploymentUpsertOne{
+		create: dc,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.Deployment.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+//
+func (dc *DeploymentCreate) OnConflictColumns(columns ...string) *DeploymentUpsertOne {
+	dc.conflict = append(dc.conflict, sql.ConflictColumns(columns...))
+	return &DeploymentUpsertOne{
+		create: dc,
+	}
+}
+
+type (
+	// DeploymentUpsertOne is the builder for "upsert"-ing
+	//  one Deployment node.
+	DeploymentUpsertOne struct {
+		create *DeploymentCreate
+	}
+
+	// DeploymentUpsert is the "OnConflict" setter.
+	DeploymentUpsert struct {
+		*sql.UpdateSet
+	}
+)
+
+// SetBranch sets the "branch" field.
+func (u *DeploymentUpsert) SetBranch(v string) *DeploymentUpsert {
+	u.Set(deployment.FieldBranch, v)
+	return u
+}
+
+// UpdateBranch sets the "branch" field to the value that was provided on create.
+func (u *DeploymentUpsert) UpdateBranch() *DeploymentUpsert {
+	u.SetExcluded(deployment.FieldBranch)
+	return u
+}
+
+// SetAddress sets the "address" field.
+func (u *DeploymentUpsert) SetAddress(v string) *DeploymentUpsert {
+	u.Set(deployment.FieldAddress, v)
+	return u
+}
+
+// UpdateAddress sets the "address" field to the value that was provided on create.
+func (u *DeploymentUpsert) UpdateAddress() *DeploymentUpsert {
+	u.SetExcluded(deployment.FieldAddress)
+	return u
+}
+
+// SetCreateAt sets the "create_at" field.
+func (u *DeploymentUpsert) SetCreateAt(v time.Time) *DeploymentUpsert {
+	u.Set(deployment.FieldCreateAt, v)
+	return u
+}
+
+// UpdateCreateAt sets the "create_at" field to the value that was provided on create.
+func (u *DeploymentUpsert) UpdateCreateAt() *DeploymentUpsert {
+	u.SetExcluded(deployment.FieldCreateAt)
+	return u
+}
+
+// UpdateNewValues updates the mutable fields using the new values that were set on create except the ID field.
+// Using this option is equivalent to using:
+//
+//	client.Deployment.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(deployment.FieldID)
+//			}),
+//		).
+//		Exec(ctx)
+//
+func (u *DeploymentUpsertOne) UpdateNewValues() *DeploymentUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.ID(); exists {
+			s.SetIgnore(deployment.FieldID)
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//  client.Deployment.Create().
+//      OnConflict(sql.ResolveWithIgnore()).
+//      Exec(ctx)
+//
+func (u *DeploymentUpsertOne) Ignore() *DeploymentUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *DeploymentUpsertOne) DoNothing() *DeploymentUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the DeploymentCreate.OnConflict
+// documentation for more info.
+func (u *DeploymentUpsertOne) Update(set func(*DeploymentUpsert)) *DeploymentUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&DeploymentUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetBranch sets the "branch" field.
+func (u *DeploymentUpsertOne) SetBranch(v string) *DeploymentUpsertOne {
+	return u.Update(func(s *DeploymentUpsert) {
+		s.SetBranch(v)
+	})
+}
+
+// UpdateBranch sets the "branch" field to the value that was provided on create.
+func (u *DeploymentUpsertOne) UpdateBranch() *DeploymentUpsertOne {
+	return u.Update(func(s *DeploymentUpsert) {
+		s.UpdateBranch()
+	})
+}
+
+// SetAddress sets the "address" field.
+func (u *DeploymentUpsertOne) SetAddress(v string) *DeploymentUpsertOne {
+	return u.Update(func(s *DeploymentUpsert) {
+		s.SetAddress(v)
+	})
+}
+
+// UpdateAddress sets the "address" field to the value that was provided on create.
+func (u *DeploymentUpsertOne) UpdateAddress() *DeploymentUpsertOne {
+	return u.Update(func(s *DeploymentUpsert) {
+		s.UpdateAddress()
+	})
+}
+
+// SetCreateAt sets the "create_at" field.
+func (u *DeploymentUpsertOne) SetCreateAt(v time.Time) *DeploymentUpsertOne {
+	return u.Update(func(s *DeploymentUpsert) {
+		s.SetCreateAt(v)
+	})
+}
+
+// UpdateCreateAt sets the "create_at" field to the value that was provided on create.
+func (u *DeploymentUpsertOne) UpdateCreateAt() *DeploymentUpsertOne {
+	return u.Update(func(s *DeploymentUpsert) {
+		s.UpdateCreateAt()
+	})
+}
+
+// Exec executes the query.
+func (u *DeploymentUpsertOne) Exec(ctx context.Context) error {
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for DeploymentCreate.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *DeploymentUpsertOne) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// Exec executes the UPSERT query and returns the inserted/updated ID.
+func (u *DeploymentUpsertOne) ID(ctx context.Context) (id uuid.UUID, err error) {
+	if u.create.driver.Dialect() == dialect.MySQL {
+		// In case of "ON CONFLICT", there is no way to get back non-numeric ID
+		// fields from the database since MySQL does not support the RETURNING clause.
+		return id, errors.New("ent: DeploymentUpsertOne.ID is not supported by MySQL driver. Use DeploymentUpsertOne.Exec instead")
+	}
+	node, err := u.create.Save(ctx)
+	if err != nil {
+		return id, err
+	}
+	return node.ID, nil
+}
+
+// IDX is like ID, but panics if an error occurs.
+func (u *DeploymentUpsertOne) IDX(ctx context.Context) uuid.UUID {
+	id, err := u.ID(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return id
+}
+
 // DeploymentCreateBulk is the builder for creating many Deployment entities in bulk.
 type DeploymentCreateBulk struct {
 	config
 	builders []*DeploymentCreate
+	conflict []sql.ConflictOption
 }
 
 // Save creates the Deployment entities in the database.
@@ -321,6 +543,7 @@ func (dcb *DeploymentCreateBulk) Save(ctx context.Context) ([]*Deployment, error
 					_, err = mutators[i+1].Mutate(root, dcb.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
+					spec.OnConflict = dcb.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
 					if err = sqlgraph.BatchCreate(ctx, dcb.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
@@ -367,6 +590,164 @@ func (dcb *DeploymentCreateBulk) Exec(ctx context.Context) error {
 // ExecX is like Exec, but panics if an error occurs.
 func (dcb *DeploymentCreateBulk) ExecX(ctx context.Context) {
 	if err := dcb.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.Deployment.CreateBulk(builders...).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.DeploymentUpsert) {
+//			SetBranch(v+v).
+//		}).
+//		Exec(ctx)
+//
+func (dcb *DeploymentCreateBulk) OnConflict(opts ...sql.ConflictOption) *DeploymentUpsertBulk {
+	dcb.conflict = opts
+	return &DeploymentUpsertBulk{
+		create: dcb,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.Deployment.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+//
+func (dcb *DeploymentCreateBulk) OnConflictColumns(columns ...string) *DeploymentUpsertBulk {
+	dcb.conflict = append(dcb.conflict, sql.ConflictColumns(columns...))
+	return &DeploymentUpsertBulk{
+		create: dcb,
+	}
+}
+
+// DeploymentUpsertBulk is the builder for "upsert"-ing
+// a bulk of Deployment nodes.
+type DeploymentUpsertBulk struct {
+	create *DeploymentCreateBulk
+}
+
+// UpdateNewValues updates the mutable fields using the new values that
+// were set on create. Using this option is equivalent to using:
+//
+//	client.Deployment.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(deployment.FieldID)
+//			}),
+//		).
+//		Exec(ctx)
+//
+func (u *DeploymentUpsertBulk) UpdateNewValues() *DeploymentUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		for _, b := range u.create.builders {
+			if _, exists := b.mutation.ID(); exists {
+				s.SetIgnore(deployment.FieldID)
+				return
+			}
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.Deployment.Create().
+//		OnConflict(sql.ResolveWithIgnore()).
+//		Exec(ctx)
+//
+func (u *DeploymentUpsertBulk) Ignore() *DeploymentUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *DeploymentUpsertBulk) DoNothing() *DeploymentUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the DeploymentCreateBulk.OnConflict
+// documentation for more info.
+func (u *DeploymentUpsertBulk) Update(set func(*DeploymentUpsert)) *DeploymentUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&DeploymentUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetBranch sets the "branch" field.
+func (u *DeploymentUpsertBulk) SetBranch(v string) *DeploymentUpsertBulk {
+	return u.Update(func(s *DeploymentUpsert) {
+		s.SetBranch(v)
+	})
+}
+
+// UpdateBranch sets the "branch" field to the value that was provided on create.
+func (u *DeploymentUpsertBulk) UpdateBranch() *DeploymentUpsertBulk {
+	return u.Update(func(s *DeploymentUpsert) {
+		s.UpdateBranch()
+	})
+}
+
+// SetAddress sets the "address" field.
+func (u *DeploymentUpsertBulk) SetAddress(v string) *DeploymentUpsertBulk {
+	return u.Update(func(s *DeploymentUpsert) {
+		s.SetAddress(v)
+	})
+}
+
+// UpdateAddress sets the "address" field to the value that was provided on create.
+func (u *DeploymentUpsertBulk) UpdateAddress() *DeploymentUpsertBulk {
+	return u.Update(func(s *DeploymentUpsert) {
+		s.UpdateAddress()
+	})
+}
+
+// SetCreateAt sets the "create_at" field.
+func (u *DeploymentUpsertBulk) SetCreateAt(v time.Time) *DeploymentUpsertBulk {
+	return u.Update(func(s *DeploymentUpsert) {
+		s.SetCreateAt(v)
+	})
+}
+
+// UpdateCreateAt sets the "create_at" field to the value that was provided on create.
+func (u *DeploymentUpsertBulk) UpdateCreateAt() *DeploymentUpsertBulk {
+	return u.Update(func(s *DeploymentUpsert) {
+		s.UpdateCreateAt()
+	})
+}
+
+// Exec executes the query.
+func (u *DeploymentUpsertBulk) Exec(ctx context.Context) error {
+	for i, b := range u.create.builders {
+		if len(b.conflict) != 0 {
+			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the DeploymentCreateBulk instead", i)
+		}
+	}
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for DeploymentCreateBulk.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *DeploymentUpsertBulk) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
 		panic(err)
 	}
 }

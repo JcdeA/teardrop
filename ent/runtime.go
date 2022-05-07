@@ -5,6 +5,7 @@ package ent
 import (
 	"time"
 
+	"github.com/fosshostorg/teardrop/ent/account"
 	"github.com/fosshostorg/teardrop/ent/deployment"
 	"github.com/fosshostorg/teardrop/ent/domain"
 	"github.com/fosshostorg/teardrop/ent/project"
@@ -17,6 +18,12 @@ import (
 // (default values, validators, hooks and policies) and stitches it
 // to their package variables.
 func init() {
+	accountFields := schema.Account{}.Fields()
+	_ = accountFields
+	// accountDescID is the schema descriptor for id field.
+	accountDescID := accountFields[0].Descriptor()
+	// account.DefaultID holds the default value on creation for the id field.
+	account.DefaultID = accountDescID.Default.(func() uuid.UUID)
 	deploymentFields := schema.Deployment{}.Fields()
 	_ = deploymentFields
 	// deploymentDescCreateAt is the schema descriptor for create_at field.
@@ -62,11 +69,11 @@ func init() {
 	userFields := schema.User{}.Fields()
 	_ = userFields
 	// userDescCreateAt is the schema descriptor for create_at field.
-	userDescCreateAt := userFields[3].Descriptor()
+	userDescCreateAt := userFields[4].Descriptor()
 	// user.DefaultCreateAt holds the default value on creation for the create_at field.
 	user.DefaultCreateAt = userDescCreateAt.Default.(func() time.Time)
 	// userDescUpdateAt is the schema descriptor for update_at field.
-	userDescUpdateAt := userFields[4].Descriptor()
+	userDescUpdateAt := userFields[5].Descriptor()
 	// user.DefaultUpdateAt holds the default value on creation for the update_at field.
 	user.DefaultUpdateAt = userDescUpdateAt.Default.(func() time.Time)
 	// user.UpdateDefaultUpdateAt holds the default value on update for the update_at field.

@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"time"
 
+	"entgo.io/ent/dialect"
+	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 	"entgo.io/ent/schema/field"
 	"github.com/fosshostorg/teardrop/ent/deployment"
@@ -21,6 +23,7 @@ type DomainCreate struct {
 	config
 	mutation *DomainMutation
 	hooks    []Hook
+	conflict []sql.ConflictOption
 }
 
 // SetDomain sets the "domain" field.
@@ -237,6 +240,7 @@ func (dc *DomainCreate) createSpec() (*Domain, *sqlgraph.CreateSpec) {
 			},
 		}
 	)
+	_spec.OnConflict = dc.conflict
 	if id, ok := dc.mutation.ID(); ok {
 		_node.ID = id
 		_spec.ID.Value = &id
@@ -308,10 +312,228 @@ func (dc *DomainCreate) createSpec() (*Domain, *sqlgraph.CreateSpec) {
 	return _node, _spec
 }
 
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.Domain.Create().
+//		SetDomain(v).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.DomainUpsert) {
+//			SetDomain(v+v).
+//		}).
+//		Exec(ctx)
+//
+func (dc *DomainCreate) OnConflict(opts ...sql.ConflictOption) *DomainUpsertOne {
+	dc.conflict = opts
+	return &DomainUpsertOne{
+		create: dc,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.Domain.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+//
+func (dc *DomainCreate) OnConflictColumns(columns ...string) *DomainUpsertOne {
+	dc.conflict = append(dc.conflict, sql.ConflictColumns(columns...))
+	return &DomainUpsertOne{
+		create: dc,
+	}
+}
+
+type (
+	// DomainUpsertOne is the builder for "upsert"-ing
+	//  one Domain node.
+	DomainUpsertOne struct {
+		create *DomainCreate
+	}
+
+	// DomainUpsert is the "OnConflict" setter.
+	DomainUpsert struct {
+		*sql.UpdateSet
+	}
+)
+
+// SetDomain sets the "domain" field.
+func (u *DomainUpsert) SetDomain(v string) *DomainUpsert {
+	u.Set(domain.FieldDomain, v)
+	return u
+}
+
+// UpdateDomain sets the "domain" field to the value that was provided on create.
+func (u *DomainUpsert) UpdateDomain() *DomainUpsert {
+	u.SetExcluded(domain.FieldDomain)
+	return u
+}
+
+// SetCreateAt sets the "create_at" field.
+func (u *DomainUpsert) SetCreateAt(v time.Time) *DomainUpsert {
+	u.Set(domain.FieldCreateAt, v)
+	return u
+}
+
+// UpdateCreateAt sets the "create_at" field to the value that was provided on create.
+func (u *DomainUpsert) UpdateCreateAt() *DomainUpsert {
+	u.SetExcluded(domain.FieldCreateAt)
+	return u
+}
+
+// SetUpdateAt sets the "update_at" field.
+func (u *DomainUpsert) SetUpdateAt(v time.Time) *DomainUpsert {
+	u.Set(domain.FieldUpdateAt, v)
+	return u
+}
+
+// UpdateUpdateAt sets the "update_at" field to the value that was provided on create.
+func (u *DomainUpsert) UpdateUpdateAt() *DomainUpsert {
+	u.SetExcluded(domain.FieldUpdateAt)
+	return u
+}
+
+// UpdateNewValues updates the mutable fields using the new values that were set on create except the ID field.
+// Using this option is equivalent to using:
+//
+//	client.Domain.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(domain.FieldID)
+//			}),
+//		).
+//		Exec(ctx)
+//
+func (u *DomainUpsertOne) UpdateNewValues() *DomainUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.ID(); exists {
+			s.SetIgnore(domain.FieldID)
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//  client.Domain.Create().
+//      OnConflict(sql.ResolveWithIgnore()).
+//      Exec(ctx)
+//
+func (u *DomainUpsertOne) Ignore() *DomainUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *DomainUpsertOne) DoNothing() *DomainUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the DomainCreate.OnConflict
+// documentation for more info.
+func (u *DomainUpsertOne) Update(set func(*DomainUpsert)) *DomainUpsertOne {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&DomainUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetDomain sets the "domain" field.
+func (u *DomainUpsertOne) SetDomain(v string) *DomainUpsertOne {
+	return u.Update(func(s *DomainUpsert) {
+		s.SetDomain(v)
+	})
+}
+
+// UpdateDomain sets the "domain" field to the value that was provided on create.
+func (u *DomainUpsertOne) UpdateDomain() *DomainUpsertOne {
+	return u.Update(func(s *DomainUpsert) {
+		s.UpdateDomain()
+	})
+}
+
+// SetCreateAt sets the "create_at" field.
+func (u *DomainUpsertOne) SetCreateAt(v time.Time) *DomainUpsertOne {
+	return u.Update(func(s *DomainUpsert) {
+		s.SetCreateAt(v)
+	})
+}
+
+// UpdateCreateAt sets the "create_at" field to the value that was provided on create.
+func (u *DomainUpsertOne) UpdateCreateAt() *DomainUpsertOne {
+	return u.Update(func(s *DomainUpsert) {
+		s.UpdateCreateAt()
+	})
+}
+
+// SetUpdateAt sets the "update_at" field.
+func (u *DomainUpsertOne) SetUpdateAt(v time.Time) *DomainUpsertOne {
+	return u.Update(func(s *DomainUpsert) {
+		s.SetUpdateAt(v)
+	})
+}
+
+// UpdateUpdateAt sets the "update_at" field to the value that was provided on create.
+func (u *DomainUpsertOne) UpdateUpdateAt() *DomainUpsertOne {
+	return u.Update(func(s *DomainUpsert) {
+		s.UpdateUpdateAt()
+	})
+}
+
+// Exec executes the query.
+func (u *DomainUpsertOne) Exec(ctx context.Context) error {
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for DomainCreate.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *DomainUpsertOne) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// Exec executes the UPSERT query and returns the inserted/updated ID.
+func (u *DomainUpsertOne) ID(ctx context.Context) (id uuid.UUID, err error) {
+	if u.create.driver.Dialect() == dialect.MySQL {
+		// In case of "ON CONFLICT", there is no way to get back non-numeric ID
+		// fields from the database since MySQL does not support the RETURNING clause.
+		return id, errors.New("ent: DomainUpsertOne.ID is not supported by MySQL driver. Use DomainUpsertOne.Exec instead")
+	}
+	node, err := u.create.Save(ctx)
+	if err != nil {
+		return id, err
+	}
+	return node.ID, nil
+}
+
+// IDX is like ID, but panics if an error occurs.
+func (u *DomainUpsertOne) IDX(ctx context.Context) uuid.UUID {
+	id, err := u.ID(ctx)
+	if err != nil {
+		panic(err)
+	}
+	return id
+}
+
 // DomainCreateBulk is the builder for creating many Domain entities in bulk.
 type DomainCreateBulk struct {
 	config
 	builders []*DomainCreate
+	conflict []sql.ConflictOption
 }
 
 // Save creates the Domain entities in the database.
@@ -338,6 +560,7 @@ func (dcb *DomainCreateBulk) Save(ctx context.Context) ([]*Domain, error) {
 					_, err = mutators[i+1].Mutate(root, dcb.builders[i+1].mutation)
 				} else {
 					spec := &sqlgraph.BatchCreateSpec{Nodes: specs}
+					spec.OnConflict = dcb.conflict
 					// Invoke the actual operation on the latest mutation in the chain.
 					if err = sqlgraph.BatchCreate(ctx, dcb.driver, spec); err != nil {
 						if sqlgraph.IsConstraintError(err) {
@@ -384,6 +607,164 @@ func (dcb *DomainCreateBulk) Exec(ctx context.Context) error {
 // ExecX is like Exec, but panics if an error occurs.
 func (dcb *DomainCreateBulk) ExecX(ctx context.Context) {
 	if err := dcb.Exec(ctx); err != nil {
+		panic(err)
+	}
+}
+
+// OnConflict allows configuring the `ON CONFLICT` / `ON DUPLICATE KEY` clause
+// of the `INSERT` statement. For example:
+//
+//	client.Domain.CreateBulk(builders...).
+//		OnConflict(
+//			// Update the row with the new values
+//			// the was proposed for insertion.
+//			sql.ResolveWithNewValues(),
+//		).
+//		// Override some of the fields with custom
+//		// update values.
+//		Update(func(u *ent.DomainUpsert) {
+//			SetDomain(v+v).
+//		}).
+//		Exec(ctx)
+//
+func (dcb *DomainCreateBulk) OnConflict(opts ...sql.ConflictOption) *DomainUpsertBulk {
+	dcb.conflict = opts
+	return &DomainUpsertBulk{
+		create: dcb,
+	}
+}
+
+// OnConflictColumns calls `OnConflict` and configures the columns
+// as conflict target. Using this option is equivalent to using:
+//
+//	client.Domain.Create().
+//		OnConflict(sql.ConflictColumns(columns...)).
+//		Exec(ctx)
+//
+func (dcb *DomainCreateBulk) OnConflictColumns(columns ...string) *DomainUpsertBulk {
+	dcb.conflict = append(dcb.conflict, sql.ConflictColumns(columns...))
+	return &DomainUpsertBulk{
+		create: dcb,
+	}
+}
+
+// DomainUpsertBulk is the builder for "upsert"-ing
+// a bulk of Domain nodes.
+type DomainUpsertBulk struct {
+	create *DomainCreateBulk
+}
+
+// UpdateNewValues updates the mutable fields using the new values that
+// were set on create. Using this option is equivalent to using:
+//
+//	client.Domain.Create().
+//		OnConflict(
+//			sql.ResolveWithNewValues(),
+//			sql.ResolveWith(func(u *sql.UpdateSet) {
+//				u.SetIgnore(domain.FieldID)
+//			}),
+//		).
+//		Exec(ctx)
+//
+func (u *DomainUpsertBulk) UpdateNewValues() *DomainUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		for _, b := range u.create.builders {
+			if _, exists := b.mutation.ID(); exists {
+				s.SetIgnore(domain.FieldID)
+				return
+			}
+		}
+	}))
+	return u
+}
+
+// Ignore sets each column to itself in case of conflict.
+// Using this option is equivalent to using:
+//
+//	client.Domain.Create().
+//		OnConflict(sql.ResolveWithIgnore()).
+//		Exec(ctx)
+//
+func (u *DomainUpsertBulk) Ignore() *DomainUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWithIgnore())
+	return u
+}
+
+// DoNothing configures the conflict_action to `DO NOTHING`.
+// Supported only by SQLite and PostgreSQL.
+func (u *DomainUpsertBulk) DoNothing() *DomainUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.DoNothing())
+	return u
+}
+
+// Update allows overriding fields `UPDATE` values. See the DomainCreateBulk.OnConflict
+// documentation for more info.
+func (u *DomainUpsertBulk) Update(set func(*DomainUpsert)) *DomainUpsertBulk {
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(update *sql.UpdateSet) {
+		set(&DomainUpsert{UpdateSet: update})
+	}))
+	return u
+}
+
+// SetDomain sets the "domain" field.
+func (u *DomainUpsertBulk) SetDomain(v string) *DomainUpsertBulk {
+	return u.Update(func(s *DomainUpsert) {
+		s.SetDomain(v)
+	})
+}
+
+// UpdateDomain sets the "domain" field to the value that was provided on create.
+func (u *DomainUpsertBulk) UpdateDomain() *DomainUpsertBulk {
+	return u.Update(func(s *DomainUpsert) {
+		s.UpdateDomain()
+	})
+}
+
+// SetCreateAt sets the "create_at" field.
+func (u *DomainUpsertBulk) SetCreateAt(v time.Time) *DomainUpsertBulk {
+	return u.Update(func(s *DomainUpsert) {
+		s.SetCreateAt(v)
+	})
+}
+
+// UpdateCreateAt sets the "create_at" field to the value that was provided on create.
+func (u *DomainUpsertBulk) UpdateCreateAt() *DomainUpsertBulk {
+	return u.Update(func(s *DomainUpsert) {
+		s.UpdateCreateAt()
+	})
+}
+
+// SetUpdateAt sets the "update_at" field.
+func (u *DomainUpsertBulk) SetUpdateAt(v time.Time) *DomainUpsertBulk {
+	return u.Update(func(s *DomainUpsert) {
+		s.SetUpdateAt(v)
+	})
+}
+
+// UpdateUpdateAt sets the "update_at" field to the value that was provided on create.
+func (u *DomainUpsertBulk) UpdateUpdateAt() *DomainUpsertBulk {
+	return u.Update(func(s *DomainUpsert) {
+		s.UpdateUpdateAt()
+	})
+}
+
+// Exec executes the query.
+func (u *DomainUpsertBulk) Exec(ctx context.Context) error {
+	for i, b := range u.create.builders {
+		if len(b.conflict) != 0 {
+			return fmt.Errorf("ent: OnConflict was set for builder %d. Set it on the DomainCreateBulk instead", i)
+		}
+	}
+	if len(u.create.conflict) == 0 {
+		return errors.New("ent: missing options for DomainCreateBulk.OnConflict")
+	}
+	return u.create.Exec(ctx)
+}
+
+// ExecX is like Exec, but panics if an error occurs.
+func (u *DomainUpsertBulk) ExecX(ctx context.Context) {
+	if err := u.create.Exec(ctx); err != nil {
 		panic(err)
 	}
 }

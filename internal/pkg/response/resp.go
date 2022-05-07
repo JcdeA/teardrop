@@ -8,12 +8,9 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func Respond(c echo.Context, resp models.Response) error {
-	if resp.Status == 0 {
-		resp.Status = 200
-	}
+func Respond(c echo.Context, status int, data interface{}) error {
 
-	return c.JSON(resp.Status, resp.ToMap())
+	return c.JSON(status, data)
 }
 
 func RespondError(c echo.Context, status echo.HTTPError, msg ...string) error {
@@ -25,7 +22,7 @@ func RespondError(c echo.Context, status echo.HTTPError, msg ...string) error {
 		message = strings.Join(msg, " ")
 	}
 
-	return Respond(c, models.Response{
+	return Respond(c, status.Code, models.ErrorResponse{
 		Status:           status.Code,
 		Message:          message,
 		DocumentationUrl: "https://example.com"})
