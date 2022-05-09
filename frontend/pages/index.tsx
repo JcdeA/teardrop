@@ -17,6 +17,7 @@ const Home: NextPage = () => {
     | {
       id: string
       name: string
+      git: string
       default_branch: string
       create_at: string
       update_at: string
@@ -28,7 +29,8 @@ const Home: NextPage = () => {
       status: number
     }
   >(`/api/projects`, fetcher)
-  const [user, setUser] = useState<{ admin: boolean; image: string, git: string }>()
+  const [user, setUser] =
+    useState<{ admin: boolean; image: string; git: string }>()
 
   useEffect(() => {
     getUser().then((user) => setUser(user))
@@ -82,20 +84,22 @@ const Home: NextPage = () => {
         <div className="grid grid-cols-2 gap-2">
           {Array.isArray(projects) &&
             projects.map((proj) => (
-              <div key={proj.id} className="rounded-xl border p-2 px-3 max-w-lg ">
-
+              <div
+                key={proj.id}
+                className="rounded-xl border p-2 px-3 max-w-lg"
+              >
                 <Link href={`/api/projects/${proj.id}`}>
-                  <a className="font-semibold">
-                    Name:{` `}
-                    {proj.name}
-                  </a>
+                  <a className="font-semibold text-lg">{proj.name}</a>
                 </Link>
+                <div className=''>
+                  <div className="text-sm text-gray-600">{proj.git}</div>
 
-                <span className="text-sm text-gray-400">
-                  Id:{` `}
-                  {proj.id}
-                </span>
+                  <div className="text-xs text-gray-400">
+                    ID:{` `}
+                    {proj.id}
+                  </div>
 
+                </div>
               </div>
             ))}
         </div>
