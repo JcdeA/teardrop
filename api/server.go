@@ -2,20 +2,23 @@ package api
 
 import (
 	"log"
+	"net/url"
 	"time"
 
 	"github.com/fosshostorg/teardrop/api/routes/auth"
 	"github.com/fosshostorg/teardrop/api/routes/deployments"
 	"github.com/fosshostorg/teardrop/api/routes/domains"
 	"github.com/fosshostorg/teardrop/api/routes/projects"
+	"github.com/fosshostorg/teardrop/api/routes/user"
 	"github.com/fosshostorg/teardrop/api/routes/webhook"
+	"github.com/fosshostorg/teardrop/api/utils"
 	"github.com/fosshostorg/teardrop/internal/pkg/db"
+	"github.com/fosshostorg/teardrop/internal/pkg/proxyutils"
 	"github.com/gorilla/csrf"
 
 	"github.com/joho/godotenv"
 	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
-	"github.com/labstack/echo/v4/middleware"
 	"github.com/palantir/go-githubapp/githubapp"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -33,13 +36,13 @@ func StartAPI() {
 	}
 	e := echo.New()
 
-	e.Use(middleware.Logger())
+	//e.Use(middleware.Logger())
 	registerRoutes(e, ghconfig.Github)
 
 	e.Use(session.Middleware(auth.SessionStore))
 
 	e.Use(echo.WrapMiddleware(
-		csrf.Protect([]byte("8hmirhx6f9uuaqb5ym6tf9283ea2ibu6")),
+		csrf.Protect([]byte("8hmirhx6f9uuaqb5ym6tf9283ea2ibu6"), csrf.Secure(false)),
 	))
 
 	log.Fatal(e.Start("0.0.0.0:3000"))
@@ -60,9 +63,11 @@ func registerRoutes(e *echo.Echo, c githubapp.Config) {
 
 	APIGroup.POST("/domains", domains.Add)
 
-	APIGroup.GET("/projects/new", projects.New)
+	APIGroup.POST("/projects", projects.New)
 
-	APIGroup.GET("/projects", projects.Get)
+	APIGroup.GET("/projects", projects.GetAll)
+
+	APIGroup.GET("/projects/:id", projects.GetProject)
 
 	APIGroup.Any("/auth/github", auth.GithubOAuthHandler(c))
 
@@ -75,6 +80,18 @@ func registerRoutes(e *echo.Echo, c githubapp.Config) {
 		),
 	)
 
-	APIGroup.GET("/ping", ping)
+	APIGroup.GET("/ping", utils.Ping)
+
+	APIGroup.GET("/csrf", func(c echo.Context) error {
+		c.Response().Header().Set("x-csrf-token", csrf.Token(c.Request()))
+
+		return c.JSON(200, echo.Map{"csrfToken": csrf.Token(c.Request())})
+	})
+
+	APIGroup.GET("/user", user.Get)
+
+	frontend, _ := url.Parse("http://localhost:4000")
+
+	e.Any("/*", echo.WrapHandler(proxyutils.NewProxy(frontend)))
 
 }

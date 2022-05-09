@@ -1,4 +1,4 @@
-package main
+package proxyutils
 
 import (
 	"log"
@@ -41,7 +41,7 @@ func joinURLPath(a, b *url.URL) (path, rawpath string) {
 	return a.Path + b.Path, apath + bpath
 }
 
-func newProxy(target *url.URL) *httputil.ReverseProxy {
+func NewProxy(target *url.URL) *httputil.ReverseProxy {
 	proxy := httputil.NewSingleHostReverseProxy(target)
 	proxy.Director = func(req *http.Request) {
 		targetQuery := target.RawQuery
@@ -67,7 +67,7 @@ func newProxy(target *url.URL) *httputil.ReverseProxy {
 			log.Println("target parse fail:", err)
 			return
 		}
-		errProxy := newProxy(remoteUrl)
+		errProxy := NewProxy(remoteUrl)
 		errProxy.Director = func(req *http.Request) {
 			targetQuery := target.RawQuery
 

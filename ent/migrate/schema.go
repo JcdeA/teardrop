@@ -112,6 +112,7 @@ var (
 		{Name: "id", Type: field.TypeUUID},
 		{Name: "name", Type: field.TypeString, SchemaType: map[string]string{"postgres": "varchar(30)"}},
 		{Name: "email", Type: field.TypeString, Unique: true, SchemaType: map[string]string{"postgres": "varchar(69)"}},
+		{Name: "admin", Type: field.TypeBool, Default: false},
 		{Name: "image", Type: field.TypeString},
 		{Name: "create_at", Type: field.TypeTime},
 		{Name: "update_at", Type: field.TypeTime},

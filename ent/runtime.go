@@ -68,12 +68,16 @@ func init() {
 	project.DefaultID = projectDescID.Default.(func() uuid.UUID)
 	userFields := schema.User{}.Fields()
 	_ = userFields
+	// userDescAdmin is the schema descriptor for admin field.
+	userDescAdmin := userFields[3].Descriptor()
+	// user.DefaultAdmin holds the default value on creation for the admin field.
+	user.DefaultAdmin = userDescAdmin.Default.(bool)
 	// userDescCreateAt is the schema descriptor for create_at field.
-	userDescCreateAt := userFields[4].Descriptor()
+	userDescCreateAt := userFields[5].Descriptor()
 	// user.DefaultCreateAt holds the default value on creation for the create_at field.
 	user.DefaultCreateAt = userDescCreateAt.Default.(func() time.Time)
 	// userDescUpdateAt is the schema descriptor for update_at field.
-	userDescUpdateAt := userFields[5].Descriptor()
+	userDescUpdateAt := userFields[6].Descriptor()
 	// user.DefaultUpdateAt holds the default value on creation for the update_at field.
 	user.DefaultUpdateAt = userDescUpdateAt.Default.(func() time.Time)
 	// user.UpdateDefaultUpdateAt holds the default value on update for the update_at field.

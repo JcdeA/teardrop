@@ -21,9 +21,9 @@ func NewNomadClient(address string) (*NomadClient, error) {
 	return &NomadClient{client}, nil
 }
 
-func (n *NomadClient) NewDeployment(run models.Run, runId int) error {
+func (n *NomadClient) NewDeployment(image string, runId int) error {
 	config := models.Map{
-		"image":        run.Project.ContainerImage,
+		"image":        image,
 		"ports":        []string{"http"},
 		"network_mode": "slirp4netns",
 	}
@@ -73,7 +73,7 @@ func (n *NomadClient) NewDeployment(run models.Run, runId int) error {
 		Datacenters: []string{"bos"},
 		Type:        pointer.ToString("batch"),
 		TaskGroups:  []*nomad.TaskGroup{group},
-		ID:          pointer.ToString(fmt.Sprintf("%d", run.Id)),
+		ID:          pointer.ToString(fmt.Sprintf("%d", runId)),
 	}
 	if _, _, err := n.Jobs().Validate(job, nil); err != nil {
 		fmt.Printf("Nomad job validation failed. Error: %v\n", err)

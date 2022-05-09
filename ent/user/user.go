@@ -17,6 +17,8 @@ const (
 	FieldName = "name"
 	// FieldEmail holds the string denoting the email field in the database.
 	FieldEmail = "email"
+	// FieldAdmin holds the string denoting the admin field in the database.
+	FieldAdmin = "admin"
 	// FieldImage holds the string denoting the image field in the database.
 	FieldImage = "image"
 	// FieldCreateAt holds the string denoting the create_at field in the database.
@@ -48,6 +50,7 @@ var Columns = []string{
 	FieldID,
 	FieldName,
 	FieldEmail,
+	FieldAdmin,
 	FieldImage,
 	FieldCreateAt,
 	FieldUpdateAt,
@@ -70,6 +73,8 @@ func ValidColumn(column string) bool {
 }
 
 var (
+	// DefaultAdmin holds the default value on creation for the "admin" field.
+	DefaultAdmin bool
 	// DefaultCreateAt holds the default value on creation for the "create_at" field.
 	DefaultCreateAt func() time.Time
 	// DefaultUpdateAt holds the default value on creation for the "update_at" field.

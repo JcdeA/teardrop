@@ -38,6 +38,20 @@ func (uc *UserCreate) SetEmail(s string) *UserCreate {
 	return uc
 }
 
+// SetAdmin sets the "admin" field.
+func (uc *UserCreate) SetAdmin(b bool) *UserCreate {
+	uc.mutation.SetAdmin(b)
+	return uc
+}
+
+// SetNillableAdmin sets the "admin" field if the given value is not nil.
+func (uc *UserCreate) SetNillableAdmin(b *bool) *UserCreate {
+	if b != nil {
+		uc.SetAdmin(*b)
+	}
+	return uc
+}
+
 // SetImage sets the "image" field.
 func (uc *UserCreate) SetImage(s string) *UserCreate {
 	uc.mutation.SetImage(s)
@@ -187,6 +201,10 @@ func (uc *UserCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (uc *UserCreate) defaults() {
+	if _, ok := uc.mutation.Admin(); !ok {
+		v := user.DefaultAdmin
+		uc.mutation.SetAdmin(v)
+	}
 	if _, ok := uc.mutation.CreateAt(); !ok {
 		v := user.DefaultCreateAt()
 		uc.mutation.SetCreateAt(v)
@@ -208,6 +226,9 @@ func (uc *UserCreate) check() error {
 	}
 	if _, ok := uc.mutation.Email(); !ok {
 		return &ValidationError{Name: "email", err: errors.New(`ent: missing required field "User.email"`)}
+	}
+	if _, ok := uc.mutation.Admin(); !ok {
+		return &ValidationError{Name: "admin", err: errors.New(`ent: missing required field "User.admin"`)}
 	}
 	if _, ok := uc.mutation.Image(); !ok {
 		return &ValidationError{Name: "image", err: errors.New(`ent: missing required field "User.image"`)}
@@ -270,6 +291,14 @@ func (uc *UserCreate) createSpec() (*User, *sqlgraph.CreateSpec) {
 			Column: user.FieldEmail,
 		})
 		_node.Email = value
+	}
+	if value, ok := uc.mutation.Admin(); ok {
+		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
+			Type:   field.TypeBool,
+			Value:  value,
+			Column: user.FieldAdmin,
+		})
+		_node.Admin = value
 	}
 	if value, ok := uc.mutation.Image(); ok {
 		_spec.Fields = append(_spec.Fields, &sqlgraph.FieldSpec{
@@ -411,6 +440,18 @@ func (u *UserUpsert) UpdateEmail() *UserUpsert {
 	return u
 }
 
+// SetAdmin sets the "admin" field.
+func (u *UserUpsert) SetAdmin(v bool) *UserUpsert {
+	u.Set(user.FieldAdmin, v)
+	return u
+}
+
+// UpdateAdmin sets the "admin" field to the value that was provided on create.
+func (u *UserUpsert) UpdateAdmin() *UserUpsert {
+	u.SetExcluded(user.FieldAdmin)
+	return u
+}
+
 // SetImage sets the "image" field.
 func (u *UserUpsert) SetImage(v string) *UserUpsert {
 	u.Set(user.FieldImage, v)
@@ -522,6 +563,20 @@ func (u *UserUpsertOne) SetEmail(v string) *UserUpsertOne {
 func (u *UserUpsertOne) UpdateEmail() *UserUpsertOne {
 	return u.Update(func(s *UserUpsert) {
 		s.UpdateEmail()
+	})
+}
+
+// SetAdmin sets the "admin" field.
+func (u *UserUpsertOne) SetAdmin(v bool) *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.SetAdmin(v)
+	})
+}
+
+// UpdateAdmin sets the "admin" field to the value that was provided on create.
+func (u *UserUpsertOne) UpdateAdmin() *UserUpsertOne {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateAdmin()
 	})
 }
 
@@ -808,6 +863,20 @@ func (u *UserUpsertBulk) SetEmail(v string) *UserUpsertBulk {
 func (u *UserUpsertBulk) UpdateEmail() *UserUpsertBulk {
 	return u.Update(func(s *UserUpsert) {
 		s.UpdateEmail()
+	})
+}
+
+// SetAdmin sets the "admin" field.
+func (u *UserUpsertBulk) SetAdmin(v bool) *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.SetAdmin(v)
+	})
+}
+
+// UpdateAdmin sets the "admin" field to the value that was provided on create.
+func (u *UserUpsertBulk) UpdateAdmin() *UserUpsertBulk {
+	return u.Update(func(s *UserUpsert) {
+		s.UpdateAdmin()
 	})
 }
 

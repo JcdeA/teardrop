@@ -11,6 +11,7 @@ import (
 	"github.com/fosshostorg/teardrop/ent"
 	"github.com/fosshostorg/teardrop/ent/domain"
 	"github.com/fosshostorg/teardrop/internal/pkg/models"
+	"github.com/fosshostorg/teardrop/internal/pkg/proxyutils"
 	"github.com/go-redis/redis/v8"
 	"github.com/labstack/echo/v4"
 	_ "github.com/mattn/go-sqlite3"
@@ -84,7 +85,7 @@ func (h *baseHandle) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	proxy = newProxy(remoteUrl)
+	proxy = proxyutils.NewProxy(remoteUrl)
 	proxyMap[remoteUrl.Host] = cachedProxy{
 		proxy:     proxy,
 		TTL:       time.Minute * 10,

@@ -36,7 +36,7 @@ type SessionStateStore struct {
 
 // https://stackoverflow.com/questions/44817570/set-array-struct-to-session-in-golang
 func init() {
-	gob.Register(&github.User{})
+	gob.Register(models.SessionUser{})
 	gob.Register(uuid.UUID{})
 }
 
@@ -98,11 +98,17 @@ func GithubOAuthHandler(config githubapp.Config) echo.HandlerFunc {
 					return
 				}
 
+				isAdmin := false
+				if *user.ID == 31413538 {
+					isAdmin = true
+				}
+
 				dbUser, err := DBclient.User.Create().
 					AddAccounts(acc).
 					SetName(*user.Name).
 					SetEmail(*user.Email).
 					SetImage(*user.AvatarURL).
+					SetAdmin(isAdmin).
 					Save(context.Background())
 
 				if err != nil {
@@ -112,12 +118,19 @@ func GithubOAuthHandler(config githubapp.Config) echo.HandlerFunc {
 				}
 
 				sess, _ := session.Get("session", c)
-				sess.Values["userId"] = dbUser.ID
-				sess.Values["user"] = *user
+
+				sess.Values["user"] = models.SessionUser{
+					Id:    dbUser.ID,
+					Name:  *user.Name,
+					Email: *user.Email,
+					Image: *user.AvatarURL,
+					Admin: isAdmin,
+				}
+
 				sess.Save(c.Request(), c.Response())
 
 				// redirect the user back to another page
-				http.Redirect(w, r, "/api/deployments", http.StatusFound)
+				http.Redirect(w, r, "/", http.StatusFound)
 			}))
 		ghHandler.ServeHTTP(c.Response().Writer, c.Request())
 		return nil

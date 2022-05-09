@@ -26,6 +26,7 @@ func (User) Fields() []ent.Field {
 		field.String("email").SchemaType(map[string]string{
 			dialect.Postgres: "varchar(69)",
 		}).Unique(),
+		field.Bool("admin").Default(false),
 		field.String("image"),
 		field.Time("create_at").Default(time.Now),
 		field.Time("update_at").Default(time.Now).UpdateDefault(time.Now),

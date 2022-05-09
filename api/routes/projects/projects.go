@@ -2,17 +2,15 @@ package projects
 
 import (
 	"context"
-	"fmt"
-	"log"
 	"net/http"
 
+	"github.com/fosshostorg/teardrop/api/utils"
 	"github.com/fosshostorg/teardrop/ent"
-	"github.com/fosshostorg/teardrop/ent/predicate"
+	"github.com/fosshostorg/teardrop/ent/project"
 	"github.com/fosshostorg/teardrop/ent/user"
 	"github.com/fosshostorg/teardrop/internal/pkg/db"
 	"github.com/fosshostorg/teardrop/internal/pkg/response"
 	"github.com/google/uuid"
-	"github.com/labstack/echo-contrib/session"
 	"github.com/labstack/echo/v4"
 )
 
@@ -24,8 +22,8 @@ type newProjectRequest struct {
 
 func New(c echo.Context) error {
 	client := db.Connect()
-	sess, _ := session.Get("session", c)
-	userId, err := uuid.Parse(fmt.Sprint(sess.Values["userId"]))
+
+	user, err := utils.AuthenticateUser(c)
 	if err != nil {
 		return response.RespondError(c, *echo.ErrUnauthorized)
 	}
@@ -37,30 +35,46 @@ func New(c echo.Context) error {
 	}
 
 	project, err := client.Project.Create().
-		AddUserIDs(userId).
+		AddUserIDs(user.Id).
 		SetName(pr.Name).
 		SetGit(pr.Git).
 		SetDefaultBranch("main").
 		Save(context.Background())
-
-	log.Println(err.Error())
+	if err != nil {
+		println(err.Error())
+		return response.RespondError(c, *echo.ErrBadRequest, err.Error())
+	}
 	return response.Respond(c, 200, *project)
 
 }
 
-func Get(c echo.Context) error {
+func GetAll(c echo.Context) error {
 	client := db.Connect()
-	sess, _ := session.Get("session", c)
-	userId, err := uuid.Parse(fmt.Sprint(sess.Values["userId"]))
-	if err != nil {
-		return response.RespondError(c, *echo.ErrUnauthorized)
-	}
-	println(userId.String())
 
-	projects, err := client.Project.Query().Where(predicate.Project(user.IDEQ(userId))).All(context.Background())
+	sessionUser, err := utils.AuthenticateUser(c)
+	if err != nil {
+		response.RespondError(c, *echo.ErrUnauthorized)
+	}
+
+	var projects []*ent.Project
+
+	includeUser := utils.ParseIncludeQuery(c, "user")
+	if includeUser {
+		projects, err = client.Project.Query().
+			Where(project.HasUsersWith(user.IDEQ(sessionUser.Id))).
+			WithUsers().
+			All(context.Background())
+
+	} else {
+		projects, err = client.Project.Query().
+			Where(project.HasUsersWith(user.IDEQ(sessionUser.Id))).
+			All(context.Background())
+
+	}
 	if err != nil {
 		response.RespondError(c, *echo.ErrInternalServerError, "error querying deployments")
 	}
+
 	if len(projects) > 0 {
 
 		var projectsLiteral []ent.Project
@@ -77,4 +91,31 @@ func Get(c echo.Context) error {
 	} else {
 		return response.RespondError(c, *echo.ErrNotFound, "no projects found")
 	}
+}
+
+func GetProject(c echo.Context) error {
+	client := db.Connect()
+	sessionUser, err := utils.AuthenticateUser(c)
+	if err != nil {
+		return response.RespondError(c, *echo.ErrUnauthorized)
+	}
+
+	id, _ := uuid.Parse(c.Param("id"))
+
+	user, err := client.User.Get(context.Background(), sessionUser.Id)
+	if err != nil {
+		return response.RespondError(c, *echo.ErrUnauthorized)
+	}
+
+	proj, err := user.QueryProjects().Where(project.IDEQ(id)).First(context.Background())
+	if err != nil {
+		switch err.(type) {
+		case *ent.NotFoundError:
+			return response.RespondError(c, *echo.ErrNotFound)
+		default:
+			return response.RespondError(c, *echo.ErrInternalServerError)
+		}
+	}
+
+	return response.Respond(c, 200, *proj)
 }
