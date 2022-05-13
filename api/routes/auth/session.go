@@ -1,4 +1,4 @@
-package user
+package auth
 
 import (
 	"github.com/fosshostorg/teardrop/api/utils"
@@ -6,11 +6,11 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func Get(c echo.Context) error {
+func GetSession(c echo.Context) error {
 	user, err := utils.AuthenticateUser(c)
 
 	if err != nil {
-		response.RespondError(c, *echo.ErrUnauthorized)
+		return response.RespondError(c, *echo.ErrUnauthorized)
 	}
 
 	return response.Respond(c, 200, user)

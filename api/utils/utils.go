@@ -2,6 +2,7 @@ package utils
 
 import (
 	"errors"
+	"log"
 	"strings"
 
 	"github.com/fosshostorg/teardrop/internal/pkg/models"
@@ -13,14 +14,15 @@ func Ping(c echo.Context) error {
 	return c.String(200, "ping!")
 }
 
-func AuthenticateUser(c echo.Context) (models.SessionUser, error) {
+func AuthenticateUser(c echo.Context) (models.Session, error) {
 	sess, _ := session.Get("session", c)
-	user, ok := sess.Values["user"].(models.SessionUser)
+	log.Println(sess.Values["session"])
+	sessionData, ok := sess.Values["session"].(models.Session)
 	if !ok {
-		return models.SessionUser{}, errors.New("could not type cast user in session to models.SessionUser - value is probably nil")
+		return models.Session{}, errors.New("could not type cast user in session to models.Session - value is probably nil")
 	}
 
-	return user, nil
+	return sessionData, nil
 }
 
 func ParseIncludeQuery(c echo.Context, value string) bool {

@@ -23,7 +23,7 @@ type newProjectRequest struct {
 func New(c echo.Context) error {
 	client := db.Connect()
 
-	user, err := utils.AuthenticateUser(c)
+	session, err := utils.AuthenticateUser(c)
 	if err != nil {
 		return response.RespondError(c, *echo.ErrUnauthorized)
 	}
@@ -35,7 +35,7 @@ func New(c echo.Context) error {
 	}
 
 	project, err := client.Project.Create().
-		AddUserIDs(user.Id).
+		AddUserIDs(session.User.Id).
 		SetName(pr.Name).
 		SetGit(pr.Git).
 		SetDefaultBranch("main").
@@ -51,9 +51,9 @@ func New(c echo.Context) error {
 func GetAll(c echo.Context) error {
 	client := db.Connect()
 
-	sessionUser, err := utils.AuthenticateUser(c)
+	session, err := utils.AuthenticateUser(c)
 	if err != nil {
-		response.RespondError(c, *echo.ErrUnauthorized)
+		return response.RespondError(c, *echo.ErrUnauthorized)
 	}
 
 	var projects []*ent.Project
@@ -61,18 +61,18 @@ func GetAll(c echo.Context) error {
 	includeUser := utils.ParseIncludeQuery(c, "user")
 	if includeUser {
 		projects, err = client.Project.Query().
-			Where(project.HasUsersWith(user.IDEQ(sessionUser.Id))).
+			Where(project.HasUsersWith(user.IDEQ(session.User.Id))).
 			WithUsers().
 			All(context.Background())
 
 	} else {
 		projects, err = client.Project.Query().
-			Where(project.HasUsersWith(user.IDEQ(sessionUser.Id))).
+			Where(project.HasUsersWith(user.IDEQ(session.User.Id))).
 			All(context.Background())
 
 	}
 	if err != nil {
-		response.RespondError(c, *echo.ErrInternalServerError, "error querying deployments")
+		return response.RespondError(c, *echo.ErrInternalServerError, "error querying projects")
 	}
 
 	if len(projects) > 0 {
@@ -102,7 +102,7 @@ func GetProject(c echo.Context) error {
 
 	id, _ := uuid.Parse(c.Param("id"))
 
-	user, err := client.User.Get(context.Background(), sessionUser.Id)
+	user, err := client.User.Get(context.Background(), sessionUser.User.Id)
 	if err != nil {
 		return response.RespondError(c, *echo.ErrUnauthorized)
 	}

@@ -1,10 +1,17 @@
 package models
 
 import (
+	"time"
+
 	"github.com/google/uuid"
 )
 
-type SessionUser struct {
+type Session struct {
+	User    User      `json:"user"`
+	Expires time.Time `json:"expires"`
+}
+
+type User struct {
 	Id    uuid.UUID `json:"id"`
 	Name  string    `json:"name"`
 	Image string    `json:"image"`

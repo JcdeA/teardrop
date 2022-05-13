@@ -10,7 +10,11 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
+	"github.com/fosshostorg/teardrop/ent"
+	"github.com/fosshostorg/teardrop/ent/account"
+	"github.com/fosshostorg/teardrop/ent/user"
 	"github.com/fosshostorg/teardrop/internal/pkg/db"
 	"github.com/fosshostorg/teardrop/internal/pkg/models"
 	"github.com/google/go-github/github"
@@ -36,7 +40,8 @@ type SessionStateStore struct {
 
 // https://stackoverflow.com/questions/44817570/set-array-struct-to-session-in-golang
 func init() {
-	gob.Register(models.SessionUser{})
+	gob.Register(models.Session{})
+	gob.Register(models.User{})
 	gob.Register(uuid.UUID{})
 }
 
@@ -70,7 +75,7 @@ func GithubOAuthHandler(config githubapp.Config) echo.HandlerFunc {
 			oauth2.WithStore(&SessionStateStore{Sessions: SessionStore}),
 			oauth2.OnLogin(func(w http.ResponseWriter, r *http.Request, login *oauth2.Login) {
 				client := github.NewClient(login.Client)
-				user, userResp, err := client.Users.Get(r.Context(), "")
+				ghUser, userResp, err := client.Users.Get(r.Context(), "")
 				if err != nil {
 					w.WriteHeader(401)
 
@@ -88,43 +93,73 @@ func GithubOAuthHandler(config githubapp.Config) echo.HandlerFunc {
 					SetRefreshToken(login.Token.RefreshToken).
 					SetTokenType(login.Token.TokenType).
 					SetExpiresAt(login.Token.Expiry).
-					SetProviderAccountId(fmt.Sprintf("%v", *user.ID)).
+					SetProviderAccountId(fmt.Sprintf("%v", *ghUser.ID)).
 					SetScope(userResp.Header.Get("X-OAuth-Scopes")).
 					Save(context.Background())
 
+				var accountExists bool = false
+
 				if err != nil {
-					log.Println(err)
-					w.WriteHeader(500)
-					return
+					switch err.(type) {
+					case *ent.ConstraintError:
+						accountExists = true
+						acc, _ = DBclient.Account.Query().
+							Where(
+								account.Provider("github"),
+								account.ProviderAccountId(fmt.Sprint(*ghUser.ID)),
+							).
+							First(context.Background())
+					default:
+						log.Println(err)
+						w.WriteHeader(500)
+						return
+					}
+
 				}
 
 				isAdmin := false
-				if *user.ID == 31413538 {
+				if *ghUser.ID == 31413538 {
 					isAdmin = true
 				}
 
-				dbUser, err := DBclient.User.Create().
-					AddAccounts(acc).
-					SetName(*user.Name).
-					SetEmail(*user.Email).
-					SetImage(*user.AvatarURL).
-					SetAdmin(isAdmin).
-					Save(context.Background())
+				var dbUser *ent.User
+				if !accountExists {
+					dbUser, err = DBclient.User.Create().
+						AddAccounts(acc).
+						SetName(*ghUser.Name).
+						SetEmail(*ghUser.Email).
+						SetImage(*ghUser.AvatarURL).
+						SetAdmin(isAdmin).
+						Save(context.Background())
 
-				if err != nil {
-					log.Println(err)
-					w.WriteHeader(500)
-					return
+					if err != nil {
+						log.Println(err)
+						w.WriteHeader(500)
+						return
+					}
+
+				} else {
+					dbUser, err = DBclient.User.Query().
+						Where(user.HasAccountsWith(account.IDEQ(acc.ID))).First(context.Background())
+					if err != nil {
+						log.Println(err)
+						w.WriteHeader(500)
+						return
+
+					}
 				}
 
 				sess, _ := session.Get("session", c)
 
-				sess.Values["user"] = models.SessionUser{
-					Id:    dbUser.ID,
-					Name:  *user.Name,
-					Email: *user.Email,
-					Image: *user.AvatarURL,
-					Admin: isAdmin,
+				sess.Values["session"] = models.Session{
+					User: models.User{
+						Id:    dbUser.ID,
+						Name:  *ghUser.Name,
+						Email: *ghUser.Email,
+						Image: *ghUser.AvatarURL,
+						Admin: isAdmin,
+					},
+					Expires: time.Now().Add(time.Hour * 24 * 30),
 				}
 
 				sess.Save(c.Request(), c.Response())

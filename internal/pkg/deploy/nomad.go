@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/AlekSi/pointer"
+	"github.com/fosshostorg/teardrop/ent"
 	"github.com/fosshostorg/teardrop/internal/pkg/models"
 	nomad "github.com/hashicorp/nomad/api"
 )
@@ -21,11 +22,11 @@ func NewNomadClient(address string) (*NomadClient, error) {
 	return &NomadClient{client}, nil
 }
 
-func (n *NomadClient) NewDeployment(image string, runId int) error {
+func (n *NomadClient) NewDeployment(dp ent.Deployment) error {
 	config := models.Map{
-		"image":        image,
-		"ports":        []string{"http"},
-		"network_mode": "slirp4netns",
+		"image":   "paketobuildpacks/builder:base",
+		"ports":   []string{"http"},
+		"runtime": "sysbox-runc",
 	}
 
 	resources := &nomad.Resources{
@@ -33,8 +34,8 @@ func (n *NomadClient) NewDeployment(image string, runId int) error {
 		MemoryMB: pointer.ToInt(128),
 	}
 	task := &nomad.Task{
-		Name:      "testgroup",
-		Driver:    "podman",
+		Name:      dp.QueryProject(),
+		Driver:    "docker",
 		Config:    config,
 		Resources: resources,
 		Env:       map[string]string{"PORT": "${NOMAD_PORT_http}"},

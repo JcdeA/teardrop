@@ -9,7 +9,6 @@ import (
 	"github.com/fosshostorg/teardrop/api/routes/deployments"
 	"github.com/fosshostorg/teardrop/api/routes/domains"
 	"github.com/fosshostorg/teardrop/api/routes/projects"
-	"github.com/fosshostorg/teardrop/api/routes/user"
 	"github.com/fosshostorg/teardrop/api/routes/webhook"
 	"github.com/fosshostorg/teardrop/api/utils"
 	"github.com/fosshostorg/teardrop/internal/pkg/db"
@@ -88,7 +87,7 @@ func registerRoutes(e *echo.Echo, c githubapp.Config) {
 		return c.JSON(200, echo.Map{"csrfToken": csrf.Token(c.Request())})
 	})
 
-	APIGroup.GET("/user", user.Get)
+	APIGroup.GET("/auth/session", auth.GetSession)
 
 	frontend, _ := url.Parse("http://localhost:4000")
 
